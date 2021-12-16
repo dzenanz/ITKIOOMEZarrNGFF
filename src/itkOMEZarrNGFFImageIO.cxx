@@ -18,13 +18,12 @@
 
 #include "itkOMEZarrNGFFImageIO.h"
 #include "itkIOCommon.h"
-#include "itksys/SystemTools.hxx"
-#include "itkMath.h"
 #include "itkIntTypes.h"
-#include "itkMetaDataObject.h"
 
-#include <algorithm>
-#include <ctime>
+#include "xtensor-io/xio_blosc.hpp"
+#include "xtensor-zarr/xzarr_hierarchy.hpp"
+#include "xtensor-zarr/xzarr_file_system_store.hpp"
+#include "xtensor-zarr/xzarr_compressor.hpp"
 
 namespace itk
 {
@@ -39,6 +38,12 @@ OMEZarrNGFFImageIO::OMEZarrNGFFImageIO()
   this->AddSupportedReadExtension(".zarr");
   this->AddSupportedReadExtension(".zr3");
   this->AddSupportedReadExtension(".zip");
+
+  xt::xzarr_register_compressor<xt::xzarr_file_system_store, xt::xio_blosc_config>();
+
+  // this->Self::SetCompressor("");
+  // this->Self::SetMaximumCompressionLevel(9);
+  // this->Self::SetCompressionLevel(2);
 }
 
 
@@ -48,31 +53,15 @@ OMEZarrNGFFImageIO::PrintSelf(std::ostream & os, Indent indent) const
   Superclass::PrintSelf(os, indent); // TODO: either add stuff here, or remove this override
 }
 
-
 bool
 OMEZarrNGFFImageIO::CanReadFile(const char * filename)
 {
   try
   {
-    std::ifstream infile;
-    this->OpenFileForReading(infile, filename);
+    xt::xzarr_file_system_store store(filename);
+    auto h = xt::get_zarr_hierarchy(store);
 
-    bool canRead = false;
-    if (infile.good())
-    {
-      // header is a 512 byte block
-      char buffer[512];
-      infile.read(buffer, 512);
-      if (!infile.bad())
-      {
-        int fileType = OMEZarrNGFFImageIO::CheckVersion(buffer);
-        canRead = (fileType > 0);
-      }
-    }
-
-    infile.close();
-
-    return canRead;
+    return true;
   }
   catch (...) // file cannot be opened, access denied etc.
   {
@@ -89,126 +78,44 @@ OMEZarrNGFFImageIO::ReadImageInformation()
     itkExceptionMacro("FileName has not been set.");
   }
 
-  std::ifstream infile;
-  this->OpenFileForReading(infile, this->m_FileName);
-
-  // header is a 512 byte block
-  this->m_RawHeader = new char[512];
-  infile.read(this->m_RawHeader, 512);
-  int           fileType = 0;
-  unsigned long bytesRead = 0;
-  if (!infile.bad())
-  {
-    bytesRead = static_cast<unsigned long>(infile.gcount());
-    fileType = OMEZarrNGFFImageIO::CheckVersion(this->m_RawHeader);
-  }
-
-  if (fileType == 0)
-  {
-    infile.close();
-    itkExceptionMacro("Unrecognized header in: " << m_FileName);
-  }
-
-  if (fileType == 1)
-  {
-    this->ReadISQHeader(&infile, bytesRead);
-  }
-  else
-  {
-    this->ReadAIMHeader(&infile, bytesRead);
-  }
-
-  infile.close();
-
-  // This code causes rescaling to Hounsfield units
-  if (this->m_MuScaling > 1.0 && this->m_MuWater > 0)
-  {
-    // mu(voxel) = intensity(voxel) / m_MuScaling
-    // HU(voxel) = mu(voxel) * 1000/m_MuWater - 1000
-    // Or, HU(voxel) = intensity(voxel) * (1000 / m_MuWater * m_MuScaling) - 1000
-    this->m_RescaleSlope = 1000.0 / (this->m_MuWater * this->m_MuScaling);
-    this->m_RescaleIntercept = -1000.0;
-  }
-
-  this->PopulateMetaDataDictionary();
-}
-
-void
-OMEZarrNGFFImageIO::PopulateMetaDataDictionary()
-{
-  MetaDataDictionary & thisDic = this->GetMetaDataDictionary();
-  EncapsulateMetaData<std::string>(thisDic, "Version", std::string(this->m_Version));
-  EncapsulateMetaData<std::string>(thisDic, "PatientName", std::string(this->m_PatientName));
-  EncapsulateMetaData<int>(thisDic, "PatientIndex", this->m_PatientIndex);
-  EncapsulateMetaData<int>(thisDic, "ScannerID", this->m_ScannerID);
-  EncapsulateMetaData<double>(thisDic, "SliceThickness", this->m_SliceThickness);
-  EncapsulateMetaData<double>(thisDic, "SliceIncrement", this->m_SliceIncrement);
+  xt::xzarr_file_system_store store(this->m_FileName);
+  auto h = xt::get_zarr_hierarchy(store);
+  //std::cout << "h.get_nodes " << h.get_nodes().dump();
+  //std::cout << "h.get_children " << h.get_children("/").dump();
+  std::cout << "h.get_array " << h.get_array("spectra");
 }
 
 
 void
 OMEZarrNGFFImageIO::Read(void * buffer)
 {
-  std::ifstream infile;
-  this->OpenFileForReading(infile, this->m_FileName);
+  const unsigned int nDims = this->GetNumberOfDimensions();
 
-  // Dimensions of the data
-  const int xsize = this->GetDimensions(0);
-  const int ysize = this->GetDimensions(1);
-  const int zsize = this->GetDimensions(2);
-  size_t    outSize = xsize;
-  outSize *= ysize;
-  outSize *= zsize;
-  outSize *= this->GetComponentSize();
+  // this will check to see if we are actually streaming
+  // we initialize with the dimensions of the file, since if
+  // largestRegion and ioRegion don't match, we'll use the streaming
+  // path since the comparison will fail
+  ImageIORegion largestRegion(nDims);
 
-  // ...
-
-  IOComponentEnum dataType = this->m_ComponentType;
-
-  size_t bufferSize = outSize;
-
-  if (this->m_RescaleSlope != 1.0 || this->m_RescaleIntercept != 0.0)
+  for (unsigned int i = 0; i < nDims; ++i)
   {
-    switch (dataType)
-    {
-      case IOComponentEnum::CHAR:
-        RescaleToHU(reinterpret_cast<char *>(buffer), bufferSize, this->m_RescaleSlope, this->m_RescaleIntercept);
-        break;
-      case IOComponentEnum::UCHAR:
-        RescaleToHU(
-          reinterpret_cast<unsigned char *>(buffer), bufferSize, this->m_RescaleSlope, this->m_RescaleIntercept);
-        break;
-      case IOComponentEnum::SHORT:
-        bufferSize /= 2;
-        RescaleToHU(reinterpret_cast<short *>(buffer), bufferSize, this->m_RescaleSlope, this->m_RescaleIntercept);
-        break;
-      case IOComponentEnum::USHORT:
-        bufferSize /= 2;
-        RescaleToHU(
-          reinterpret_cast<unsigned short *>(buffer), bufferSize, this->m_RescaleSlope, this->m_RescaleIntercept);
-        break;
-      case IOComponentEnum::INT:
-        bufferSize /= 4;
-        RescaleToHU(reinterpret_cast<int *>(buffer), bufferSize, this->m_RescaleSlope, this->m_RescaleIntercept);
-        break;
-      case IOComponentEnum::UINT:
-        bufferSize /= 4;
-        RescaleToHU(
-          reinterpret_cast<unsigned int *>(buffer), bufferSize, this->m_RescaleSlope, this->m_RescaleIntercept);
-        break;
-      case IOComponentEnum::FLOAT:
-        bufferSize /= 4;
-        RescaleToHU(reinterpret_cast<float *>(buffer), bufferSize, this->m_RescaleSlope, this->m_RescaleIntercept);
-        break;
-      default:
-        itkExceptionMacro("Unrecognized data type in file: " << dataType);
-    }
+    largestRegion.SetIndex(i, 0);
+    largestRegion.SetSize(i, this->GetDimensions(i));
+  }
+
+  if (largestRegion != m_IORegion)
+  {
+    // Stream the data in chunks
+  }
+  else
+  {
+    // Read all at once
   }
 }
 
 
 bool
-OMEZarrNGFFImageIO::CanWriteFile(const char * name)
+OMEZarrNGFFImageIO::CanWriteFile(const char* name)
 {
   const std::string filename = name;
 
@@ -217,15 +124,7 @@ OMEZarrNGFFImageIO::CanWriteFile(const char * name)
     return false;
   }
 
-  std::string filenameLower = filename;
-  std::transform(filenameLower.begin(), filenameLower.end(), filenameLower.begin(), ::tolower);
-  std::string::size_type isqPos = filenameLower.rfind(".isq");
-  if ((isqPos != std::string::npos) && (isqPos == filename.length() - 4))
-  {
-    return true;
-  }
-
-  return false;
+  return this->HasSupportedWriteExtension(name, true);
 }
 
 
@@ -240,7 +139,7 @@ OMEZarrNGFFImageIO::WriteImageInformation()
   std::ofstream outFile;
   this->OpenFileForWriting(outFile, m_FileName);
 
-  this->WriteISQHeader(&outFile);
+  outFile << "Placeholder for real data. TODO";
 
   outFile.close();
 }
@@ -253,32 +152,12 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
 
   std::ofstream outFile;
   this->OpenFileForWriting(outFile, m_FileName, false);
-  outFile.seekp(this->m_HeaderSize, std::ios::beg);
+  outFile.seekp(32, std::ios::beg);
 
-  const auto numberOfBytes = static_cast<SizeValueType>(this->GetImageSizeInBytes());
-  const auto numberOfComponents = static_cast<SizeValueType>(this->GetImageSizeInComponents());
-
-  if (this->GetComponentType() != IOComponentEnum::SHORT)
-  {
-    itkExceptionMacro("OMEZarrNGFFImageIO only supports writing short files.");
-  }
-
-  if (ByteSwapper<short>::SystemIsBigEndian())
-  {
-    char * tempmemory = new char[numberOfBytes];
-    memcpy(tempmemory, buffer, numberOfBytes);
-    {
-      ByteSwapper<short>::SwapRangeFromSystemToBigEndian(reinterpret_cast<short *>(tempmemory), numberOfComponents);
-    }
-
-    // Write the actual pixel data
-    outFile.write(static_cast<const char *>(tempmemory), numberOfBytes);
-    delete[] tempmemory;
-  }
-  else
-  {
-    outFile.write(static_cast<const char *>(buffer), numberOfBytes);
-  }
+  outFile << "ImageSizeInBytes: " << this->GetImageSizeInBytes() << std::endl;
+  outFile << "ImageSizeInComponents: " << this->GetImageSizeInComponents() << std::endl;
+  outFile << "ComponentType: " << this->GetComponentTypeAsString(this->GetComponentType()) << std::endl;
+  outFile << "m_IORegion: " << this->m_IORegion << std::endl;
 
   outFile.close();
 }
