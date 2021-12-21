@@ -22,12 +22,66 @@
 #include "itkOMEZarrNGFFImageIO.h"
 #include "itkTestingMacros.h"
 
+#include <vector>
+#include "xtensor-zarr/xzarr_hierarchy.hpp"
+#include "xtensor-zarr/xzarr_file_system_store.hpp"
+#include "xtensor-io/xio_binary.hpp"
+
+#include "xtensor-io/xio_blosc.hpp"
+#include "xtensor-zarr/xzarr_compressor.hpp"
 
 #define SPECIFIC_IMAGEIO_MODULE_TEST
+
 
 int
 itkOMEZarrNGFFImageIOTest(int argc, char * argv[])
 {
+  //xt::xzarr_register_compressor<xt::xzarr_file_system_store, xt::xio_binary_config>();
+  //xt::xzarr_register_compressor<xt::xzarr_file_system_store, xt::xio_blosc_config>();
+
+  {
+    // create a hierarchy on the local file system
+    xt::xzarr_file_system_store store("test.zr3");
+    auto h = xt::get_zarr_hierarchy(store);
+
+    // create an array in the hierarchy
+    nlohmann::json attrs = { {"question", "life"}, {"answer", 42} };
+    using S = std::vector<std::size_t>;
+    S shape = { 4, 4 };
+    S chunk_shape = { 2, 2 };
+
+    xt::zarray a = h.create_array(
+      "/arthur/dent",  // path to the array in the store
+      shape,  // array shape
+      chunk_shape,  // chunk shape
+      "<f8"  // data type, here little-endian 64-bit floating point
+    );
+
+    //// write array data
+    //a(2, 1) = 3.;
+
+    //// read array data
+    //std::cout << a(2, 1) << std::endl;
+    //// prints `3.`
+    //std::cout << a(2, 2) << std::endl;
+    //// prints `0.` (fill value)
+    //std::cout << a.attrs() << std::endl;
+    //// prints `{"answer":42,"question":"life"}`
+
+    // create a group
+    auto g = h.create_group("/tricia/mcmillan", attrs);
+
+    // explore the hierarchy
+    // get children at a point in the hierarchy
+    std::string children = h.get_children("/").dump();
+    std::cout << children << std::endl;
+    // prints `{"arthur":"implicit_group","marvin":"explicit_group","tricia":"implicit_group"}`
+    // view the whole hierarchy
+    std::string nodes = h.get_nodes().dump();
+    std::cout << nodes << std::endl;
+    // prints `{"arthur":"implicit_group","arthur/dent":"array","tricia":"implicit_group","tricia/mcmillan":"explicit_group"}`
+  }
+
   if (argc < 3)
   {
     std::cerr << "Missing parameters." << std::endl;
