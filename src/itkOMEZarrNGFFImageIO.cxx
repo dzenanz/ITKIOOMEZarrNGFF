@@ -201,27 +201,14 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
                                             o            // options
   );
 
-  const float * data = static_cast<const float *>(buffer);
+  void *  writableBuffer = const_cast<void *>(buffer);
+  float * data = static_cast<float *>(writableBuffer);
 
-  auto a = z.get_array<float>();
-  // a = *data; // this compiles, but what does it do? the same as fill()?
-  a.fill(0.0f);
-  // a.assign(data); // this doesn't work
-  // z.swap(); // maybe use this for high performance?
+  size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
 
-  for (unsigned z = 0; z < shape[0]; ++z)
-  {
-    for (unsigned y = 0; y < shape[1]; ++y)
-    {
-      for (unsigned x = 0; x < shape[2]; ++x)
-      {
-        for (unsigned c = 0; c < shape[3]; ++c)
-        {
-          a(z, y, x, c) = *data++;
-        }
-      }
-    }
-  }
+  auto       dArray = xt::adapt(data, size, xt::no_ownership(), shape);
+  xt::zarray zd(dArray);
+  z.swap(zd);
 
   // a.chunks().flush(); // doesn't work
 }
