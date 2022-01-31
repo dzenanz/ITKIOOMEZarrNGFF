@@ -20,14 +20,18 @@
 #include "itkIOCommon.h"
 #include "itkIntTypes.h"
 
-#include "xtensor-io/xio_blosc.hpp"
 #include "xtensor-zarr/xzarr_hierarchy.hpp"
 #include "xtensor-zarr/xzarr_file_system_store.hpp"
+
 #include "xtensor-zarr/xzarr_compressor.hpp"
+#include "xtensor-io/xio_binary.hpp"
+#include "xtensor-io/xio_blosc.hpp"
+#include "xtensor-io/xio_gzip.hpp"
 
 namespace xt
 {
-  template void xzarr_register_compressor<xzarr_file_system_store, xio_blosc_config>();
+template void
+xzarr_register_compressor<xzarr_file_system_store, xio_blosc_config>();
 }
 
 namespace itk
@@ -64,7 +68,7 @@ OMEZarrNGFFImageIO::CanReadFile(const char * filename)
   try
   {
     xt::xzarr_file_system_store store(filename);
-    auto h = xt::get_zarr_hierarchy(store);
+    auto                        h = xt::get_zarr_hierarchy(store);
 
     return true;
   }
@@ -84,31 +88,21 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   }
 
   xt::xzarr_file_system_store store(this->m_FileName);
-  auto h = xt::get_zarr_hierarchy(store);
-  //std::cout << "h.get_nodes " << h.get_nodes().dump();
-  //std::cout << "h.get_children " << h.get_children("/").dump();
-  std::cout << "h.get_array " << h.get_array("spectra");
+  auto                        h = xt::get_zarr_hierarchy(store);
+  // std::cout << "h.get_nodes " << h.get_nodes().dump();
+  // std::cout << "h.get_children " << h.get_children("/").dump();
+  std::cout << "h.get_array " << h.get_array("image");
 }
 
 
 void
 OMEZarrNGFFImageIO::Read(void * buffer)
 {
-  const unsigned int nDims = this->GetNumberOfDimensions();
-
   // this will check to see if we are actually streaming
   // we initialize with the dimensions of the file, since if
   // largestRegion and ioRegion don't match, we'll use the streaming
   // path since the comparison will fail
-  ImageIORegion largestRegion(nDims);
-
-  for (unsigned int i = 0; i < nDims; ++i)
-  {
-    largestRegion.SetIndex(i, 0);
-    largestRegion.SetSize(i, this->GetDimensions(i));
-  }
-
-  if (largestRegion != m_IORegion)
+  if (this->GetLargestRegion() != m_IORegion)
   {
     // Stream the data in chunks
   }
@@ -120,7 +114,7 @@ OMEZarrNGFFImageIO::Read(void * buffer)
 
 
 bool
-OMEZarrNGFFImageIO::CanWriteFile(const char* name)
+OMEZarrNGFFImageIO::CanWriteFile(const char * name)
 {
   const std::string filename = name;
 
@@ -141,30 +135,95 @@ OMEZarrNGFFImageIO::WriteImageInformation()
     itkExceptionMacro("FileName has not been set.");
   }
 
-  std::ofstream outFile;
-  this->OpenFileForWriting(outFile, m_FileName);
-
-  outFile << "Placeholder for real data. TODO";
-
-  outFile.close();
+  // we will do everything in Write() method
 }
 
 
 void
 OMEZarrNGFFImageIO::Write(const void * buffer)
 {
-  this->WriteImageInformation();
+  xt::xzarr_file_system_store fsStore(this->m_FileName);
 
-  std::ofstream outFile;
-  this->OpenFileForWriting(outFile, m_FileName, false);
-  outFile.seekp(32, std::ios::beg);
+  auto zarrHierarchy = xt::create_zarr_hierarchy(fsStore);
 
-  outFile << "ImageSizeInBytes: " << this->GetImageSizeInBytes() << std::endl;
-  outFile << "ImageSizeInComponents: " << this->GetImageSizeInComponents() << std::endl;
-  outFile << "ComponentType: " << this->GetComponentTypeAsString(this->GetComponentType()) << std::endl;
-  outFile << "m_IORegion: " << this->m_IORegion << std::endl;
+  nlohmann::json attributes = { "multiscales",
+                                { { "name",
+                                    "image",
+                                    "version",
+                                    "0.3",
+                                    "datasets",
+                                    //{ { "path", "0" }, { "path", "1" }, { "path", "2" } },
+                                    { { "path", "0" } },
+                                    "axes",
+                                    //{ "t", "z", "y", "x", "c" },
+                                    { "z", "y", "x", "c" },
+                                    "type",
+                                    "gaussian",
+                                    "metadata",
+                                    { "method", "not_implemented" } } } };
 
-  outFile.close();
+  zarrHierarchy.create_group("/image", attributes);
+
+  if (this->GetLargestRegion() != m_IORegion)
+  {
+    // Stream the data in chunks
+  }
+  else
+  {
+    // Write all at once
+  }
+
+  const unsigned int  nDims = this->GetNumberOfDimensions();
+  std::vector<size_t> shape;
+  std::vector<size_t> chunk_shape;
+  for (unsigned int i = nDims - 1; i < nDims; --i)
+  {
+    shape.push_back(this->GetDimensions(i));
+    SizeValueType chunkSize = std::max(256ull, this->GetDimensions(i) / 256ull);
+    chunkSize = std::min(chunkSize, this->GetDimensions(i));
+    chunk_shape.push_back(chunkSize);
+  }
+  shape.push_back(this->GetNumberOfComponents());
+  chunk_shape.push_back(this->GetNumberOfComponents());
+
+  // specify options
+  xt::xzarr_create_array_options<xt::xio_blosc_config> o;
+  o.chunk_memory_layout = 'C';
+  o.chunk_separator = '/';
+  // o.attrs = attributes;
+  // o.chunk_pool_size = 2;
+  o.fill_value = 0.0;
+
+  xt::zarray z = zarrHierarchy.create_array("/image/0",  // path to the array in the store
+                                            shape,       // array shape
+                                            chunk_shape, // chunk shape
+                                            "f4",        // data type, here 32-bit floating point
+                                            o            // options
+  );
+
+  const float * data = static_cast<const float *>(buffer);
+
+  auto a = z.get_array<float>();
+  // a = *data; // this compiles, but what does it do? the same as fill()?
+  a.fill(0.0f);
+  // a.assign(data); // this doesn't work
+  // z.swap(); // maybe use this for high performance?
+
+  for (unsigned z = 0; z < shape[0]; ++z)
+  {
+    for (unsigned y = 0; y < shape[1]; ++y)
+    {
+      for (unsigned x = 0; x < shape[2]; ++x)
+      {
+        for (unsigned c = 0; c < shape[3]; ++c)
+        {
+          a(z, y, x, c) = *data++;
+        }
+      }
+    }
+  }
+
+  // a.chunks().flush(); // doesn't work
 }
 
 } // end namespace itk
