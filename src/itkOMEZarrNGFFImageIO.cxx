@@ -207,10 +207,7 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
 
   auto       dArray = xt::adapt(data, size, xt::no_ownership(), shape);
-  xt::zarray zd(dArray);
-  z.swap(zd);
-
-  // a.chunks().flush(); // doesn't work
+  z.assign(dArray);
 }
 
 } // end namespace itk
