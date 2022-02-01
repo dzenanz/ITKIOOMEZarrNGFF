@@ -89,26 +89,39 @@ OMEZarrNGFFImageIO::ReadImageInformation()
 
   xt::xzarr_file_system_store store(this->m_FileName);
   auto                        h = xt::get_zarr_hierarchy(store);
-  // std::cout << "h.get_nodes " << h.get_nodes().dump();
-  // std::cout << "h.get_children " << h.get_children("/").dump();
-  std::cout << "h.get_array " << h.get_array("image");
+  xt::zarray                  z = h.get_array("/image/0");
+  const unsigned int          nDims = z.dimension();
+  this->SetNumberOfDimensions(nDims - 1);
+
+  std::vector<size_t> shape(z.shape().crbegin(), z.shape().crend()); // construct in reverse via iterators
+  this->SetComponentType(IOComponentEnum::FLOAT); // TODO: determine this programatically
+  this->SetNumberOfComponents(shape[0]);
+
+  for (unsigned int i = 0; i < nDims - 1; ++i)
+  {
+    this->SetDimensions(i, shape[i + 1]);
+  }
 }
 
 
 void
 OMEZarrNGFFImageIO::Read(void * buffer)
 {
-  // this will check to see if we are actually streaming
-  // we initialize with the dimensions of the file, since if
-  // largestRegion and ioRegion don't match, we'll use the streaming
-  // path since the comparison will fail
   if (this->GetLargestRegion() != m_IORegion)
   {
     // Stream the data in chunks
   }
   else
   {
-    // Read all at once
+    xt::xzarr_file_system_store store(this->m_FileName);
+    auto                        h = xt::get_zarr_hierarchy(store);
+    xt::zarray                  z = h.get_array("/image/0");
+
+    float * data = static_cast<float *>(buffer);
+
+    size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
+    auto dArray = xt::adapt(data, size, xt::no_ownership(), z.shape());
+    dArray.assign(z.get_array<float>());
   }
 }
 
@@ -179,8 +192,7 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   for (unsigned int i = nDims - 1; i < nDims; --i)
   {
     shape.push_back(this->GetDimensions(i));
-    SizeValueType chunkSize = std::max(256ull, this->GetDimensions(i) / 256ull);
-    chunkSize = std::min(chunkSize, this->GetDimensions(i));
+    SizeValueType chunkSize = std::min(chunkSize, 16ull);
     chunk_shape.push_back(chunkSize);
   }
   shape.push_back(this->GetNumberOfComponents());
@@ -201,12 +213,11 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
                                             o            // options
   );
 
-  void *  writableBuffer = const_cast<void *>(buffer);
-  float * data = static_cast<float *>(writableBuffer);
+  const float * data = static_cast<const float *>(buffer);
 
   size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
 
-  auto       dArray = xt::adapt(data, size, xt::no_ownership(), shape);
+  auto dArray = xt::adapt(data, size, xt::no_ownership(), shape);
   z.assign(dArray);
 }
 
