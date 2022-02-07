@@ -25,9 +25,13 @@
 #include "xtensor-zarr/xzarr_file_system_store.hpp"
 #include "xtensor-zarr/xzarr_compressor.hpp"
 
+// this is not necessary if we link to xtensor-zarr-gdal instead of xtensor-zarr
 namespace xt
 {
+  template void xzarr_register_compressor<xzarr_file_system_store, xio_gzip_config>();
+  template void xzarr_register_compressor<xzarr_file_system_store, xio_zlib_config>();
   template void xzarr_register_compressor<xzarr_file_system_store, xio_blosc_config>();
+  template class xchunked_array_factory<xzarr_file_system_store>;
 }
 
 namespace itk
@@ -82,6 +86,8 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   {
     itkExceptionMacro("FileName has not been set.");
   }
+
+  return; // debug
 
   xt::xzarr_file_system_store store(this->m_FileName);
   auto h = xt::get_zarr_hierarchy(store);
