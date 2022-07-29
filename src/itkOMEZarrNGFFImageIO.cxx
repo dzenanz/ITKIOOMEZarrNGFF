@@ -88,13 +88,20 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   }
 
   xt::xzarr_file_system_store store(this->m_FileName);
-  auto                        h = xt::get_zarr_hierarchy(store);
-  xt::zarray                  z = h.get_array("/image/0");
-  const unsigned int          nDims = z.dimension();
+
+  auto        h = xt::get_zarr_hierarchy(store, "");
+  auto        node = h["/"];
+  std::string nodes = h.get_nodes("/").dump();
+  std::cout << nodes << std::endl;
+  std::string children = h.get_children("/").dump();
+  std::cout << children << std::endl;
+
+  xt::zarray         z = h.get_array("/image/0"); // TODO: do not hard-code a prefix.
+  const unsigned int nDims = z.dimension();
   this->SetNumberOfDimensions(nDims - 1);
 
   std::vector<size_t> shape(z.shape().crbegin(), z.shape().crend()); // construct in reverse via iterators
-  this->SetComponentType(IOComponentEnum::FLOAT); // TODO: determine this programatically
+  this->SetComponentType(IOComponentEnum::FLOAT);                    // TODO: determine this programatically
   this->SetNumberOfComponents(shape[0]);
 
   for (unsigned int i = 0; i < nDims - 1; ++i)
@@ -120,7 +127,7 @@ OMEZarrNGFFImageIO::Read(void * buffer)
     float * data = static_cast<float *>(buffer);
 
     size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
-    auto dArray = xt::adapt(data, size, xt::no_ownership(), z.shape());
+    auto   dArray = xt::adapt(data, size, xt::no_ownership(), z.shape());
     dArray.assign(z.get_array<float>());
   }
 }
@@ -192,7 +199,7 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   for (unsigned int i = nDims - 1; i < nDims; --i)
   {
     shape.push_back(this->GetDimensions(i));
-    SizeValueType chunkSize = std::min(chunkSize, 16ull);
+    SizeValueType chunkSize = std::min(this->GetDimensions(i), 16ull);
     chunk_shape.push_back(chunkSize);
   }
   shape.push_back(this->GetNumberOfComponents());
