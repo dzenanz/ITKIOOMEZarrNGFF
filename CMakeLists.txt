@@ -39,6 +39,7 @@ set(_itk_build_shared ${BUILD_SHARED_LIBS})
 
 find_package(ITK 5.0 REQUIRED)
 list(APPEND CMAKE_MODULE_PATH ${ITK_CMAKE_DIR})
+# list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # message("after find ITK")
@@ -68,10 +69,10 @@ set(ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS})
 set(netCDF_ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS})
 set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES})
 
-message("before FetchContent_Declare")
-dump_cmake_variables("ITK_")
+# message("before FetchContent_Declare")
+# dump_cmake_variables("ITK_")
 
-
+# uncommenting this causes duplicate project error
 # FetchContent_Declare(
 #   hdf5
 #   GIT_REPOSITORY https://github.com/HDFGroup/hdf5
@@ -83,30 +84,49 @@ get_filename_component(ITK_SOURCE_DIR "${ITK_SOURCE_DIR}/../" ABSOLUTE)
 message("ITK_SOURCE_DIR: ${ITK_SOURCE_DIR}")
 # set(BUILD_GENERATOR ${CMAKE_GENERATOR})
 # set(HDF5_ROOT "${ITK_SOURCE_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/config/cmake/scripts")
-set(HDF5_ROOT "${ITK_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5")
-message("HDF5_ROOT: ${HDF5_ROOT}")
+# set(HDF5_ROOT "${ITK_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5")
+# message("HDF5_ROOT: ${HDF5_ROOT}")
+
+# set(HDF5_NO_FIND_PACKAGE_CONFIG_FILE TRUE)
+# find_package(hdf5 COMPONENTS C HL CONFIG)
+
+# satisfy netCDF's need for HDF5 definitions
+set(HDF5_INCLUDE_DIR ${ITKHDF5_INCLUDE_DIRS}) # this needs to be one directory, containing H5pubconf.h and hdf5.h
+message("ITKHDF5_INCLUDE_DIRS: ${ITKHDF5_INCLUDE_DIRS}")
+# set(HDF5_INCLUDE_DIR "${ITK_SOURCE_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/src")
+# message("HDF5_INCLUDE_DIR: ${HDF5_INCLUDE_DIR}")
+set(HDF5_VERSION "1.12.1")
+# set(HDF5_C_LIBRARY ${ITKHDF5_LIBRARIES})
+# set(HDF5_HL_LIBRARY ${ITKHDF5_LIBRARIES})
+set(HDF5_LIBRARIES ${ITKHDF5_LIBRARIES})
+
+# message("after find HDF5")
+# dump_cmake_variables("HDF5")
 
 FetchContent_Declare(
   netCDF
-  GIT_REPOSITORY https://github.com/unidata/netcdf-c
-  GIT_TAG        v4.9.0
+  GIT_REPOSITORY https://github.com/dzenanz/netcdf-c # we need a fork, otherwise it is to hard to provide HDF5 to netCDF
+  GIT_TAG        itkSpecific # main # v4.9.0
 )
 
-message("HDF5 after FetchContent_Declare")
-dump_cmake_variables("HDF5")
+# message("HDF5 after FetchContent_Declare")
+# dump_cmake_variables("HDF5")
 
 # FetchContent_MakeAvailable(CURL libzip netCDF)
 FetchContent_MakeAvailable(netCDF)
 
-message("after FetchContent_MakeAvailable")
-dump_cmake_variables()
+# message("after FetchContent_MakeAvailable")
+# dump_cmake_variables()
 
 # Restore build options
 set(BUILD_TESTING ${_itk_build_testing})
 set(BUILD_SHARED_LIBS ${_itk_build_shared})
 
-find_package(netCDF)
+# find_package(netCDF)
 
+list(APPEND IOOMEZarrNGFF_LIBRARIES netCDF::netcdf)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+dump_cmake_variables()
 include(ITKModuleExternal)
 
 # find_package(xtensor-zarr CONFIG)
