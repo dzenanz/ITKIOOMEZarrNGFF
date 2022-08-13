@@ -8,6 +8,29 @@ if(ITK_SOURCE_DIR)
   It needs to be built of out source, and pointed to a certain ITK build.")
 endif()
 
+function(dump_cmake_variables)
+    get_cmake_property(_variableNames VARIABLES)
+    list (SORT _variableNames)
+    foreach (_variableName ${_variableNames})
+        unset(MATCHED)
+        string(REGEX MATCH "CMAKE_" MATCHED ${_variableName})
+        if (MATCHED) # skip all of CMake's variables - there is a lot of them
+            continue()
+        endif()
+
+        if (ARGV0)
+            unset(MATCHED)
+            string(REGEX MATCH ${ARGV0} MATCHED ${_variableName})
+            if (NOT MATCHED)
+                continue()
+            endif()
+        endif()
+        message(STATUS "${_variableName}=${${_variableName}}")
+    endforeach()
+endfunction()
+
+# message("before everything")
+# dump_cmake_variables()
 
 include(FetchContent)
 set(_itk_build_testing ${BUILD_TESTING})
@@ -18,36 +41,65 @@ find_package(ITK 5.0 REQUIRED)
 list(APPEND CMAKE_MODULE_PATH ${ITK_CMAKE_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Now specify all the libraries we want to fetch and compile
-set(BUILD_CURL_EXE OFF)
-FetchContent_Declare(
-  CURL
-  GIT_REPOSITORY https://github.com/curl/curl
-  GIT_TAG        curl-7_84_0
-)
+# message("after find ITK")
+# dump_cmake_variables()
 
-set(BUILD_DOC OFF)
-set(BUILD_EXAMPLES OFF)
-set(BUILD_REGRESS OFF)
-set(BUILD_TOOLS OFF)
-FetchContent_Declare(
-  libzip
-  GIT_REPOSITORY https://github.com/nih-at/libzip
-  GIT_TAG        v1.9.2
-)
+# Now specify all the libraries we want to fetch and compile
+# set(BUILD_CURL_EXE OFF)
+# FetchContent_Declare(
+#   CURL
+#   GIT_REPOSITORY https://github.com/curl/curl
+#   GIT_TAG        curl-7_84_0
+# )
+
+# set(BUILD_DOC OFF)
+# set(BUILD_EXAMPLES OFF)
+# set(BUILD_REGRESS OFF)
+# set(BUILD_TOOLS OFF)
+set(netcdf_ENABLE_ZSTD OFF)
+set(ENABLE_ZSTD OFF)
+# FetchContent_Declare(
+#   libzip
+#   GIT_REPOSITORY https://github.com/nih-at/libzip
+#   GIT_TAG        v1.9.2
+# )
 
 set(ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS})
 set(netCDF_ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS})
 set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES})
-set(netcdf_ENABLE_ZSTD OFF)
+
+message("before FetchContent_Declare")
+dump_cmake_variables("ITK_")
+
+
+# FetchContent_Declare(
+#   hdf5
+#   GIT_REPOSITORY https://github.com/HDFGroup/hdf5
+#   GIT_TAG        hdf5-1_12_2
+# )
+
+get_filename_component(ITK_SOURCE_DIR ${ITK_USE_FILE} DIRECTORY)
+get_filename_component(ITK_SOURCE_DIR "${ITK_SOURCE_DIR}/../" ABSOLUTE)
+message("ITK_SOURCE_DIR: ${ITK_SOURCE_DIR}")
+# set(BUILD_GENERATOR ${CMAKE_GENERATOR})
+# set(HDF5_ROOT "${ITK_SOURCE_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/config/cmake/scripts")
+set(HDF5_ROOT "${ITK_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5")
+message("HDF5_ROOT: ${HDF5_ROOT}")
+
 FetchContent_Declare(
   netCDF
   GIT_REPOSITORY https://github.com/unidata/netcdf-c
   GIT_TAG        v4.9.0
-  OVERRIDE_FIND_PACKAGE
 )
 
-FetchContent_MakeAvailable(CURL libzip netCDF)
+message("HDF5 after FetchContent_Declare")
+dump_cmake_variables("HDF5")
+
+# FetchContent_MakeAvailable(CURL libzip netCDF)
+FetchContent_MakeAvailable(netCDF)
+
+message("after FetchContent_MakeAvailable")
+dump_cmake_variables()
 
 # Restore build options
 set(BUILD_TESTING ${_itk_build_testing})
