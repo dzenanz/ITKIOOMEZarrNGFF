@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16.3)
 cmake_policy(SET CMP0135 NEW)
+cmake_policy(SET CMP0002 OLD) # doesn't help
 
 project(IOOMEZarrNGFF)
 
@@ -48,12 +49,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # dump_cmake_variables()
 
 # Now specify all the libraries we want to fetch and compile
-# set(BUILD_CURL_EXE OFF)
-# FetchContent_Declare(
-#   CURL
-#   GIT_REPOSITORY https://github.com/curl/curl
-#   GIT_TAG        curl-7_84_0
-# )
+set(BUILD_CURL_EXE OFF)
+FetchContent_Declare(
+  CURL
+  GIT_REPOSITORY https://github.com/curl/curl
+  GIT_TAG        curl-7_84_0
+)
 
 # set(BUILD_DOC OFF)
 # set(BUILD_EXAMPLES OFF)
@@ -73,13 +74,6 @@ set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES})
 
 # message("before FetchContent_Declare")
 # dump_cmake_variables("ITK_")
-
-# uncommenting this causes duplicate project error
-# FetchContent_Declare(
-#   hdf5
-#   GIT_REPOSITORY https://github.com/HDFGroup/hdf5
-#   GIT_TAG        hdf5-1_12_2
-# )
 
 get_filename_component(ITK_ROOT_DIR ${ITK_USE_FILE} DIRECTORY)
 get_filename_component(ITK_ROOT_DIR "${ITK_ROOT_DIR}/../" ABSOLUTE)
@@ -109,8 +103,7 @@ FetchContent_Declare(
 # message("HDF5 after FetchContent_Declare")
 # dump_cmake_variables("HDF5")
 
-# FetchContent_MakeAvailable(CURL libzip netCDF)
-FetchContent_MakeAvailable(netCDF)
+FetchContent_MakeAvailable(CURL netCDF) # libzip
 
 # message("after FetchContent_MakeAvailable")
 # dump_cmake_variables()
