@@ -81,22 +81,17 @@ set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES})
 #   GIT_TAG        hdf5-1_12_2
 # )
 
-# get_filename_component(ITK_SOURCE_DIR ${ITK_USE_FILE} DIRECTORY)
-# get_filename_component(ITK_SOURCE_DIR "${ITK_SOURCE_DIR}/../" ABSOLUTE)
-# message("ITK_SOURCE_DIR: ${ITK_SOURCE_DIR}")
-# set(BUILD_GENERATOR ${CMAKE_GENERATOR})
-# set(HDF5_ROOT "${ITK_SOURCE_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/config/cmake/scripts")
-# set(HDF5_ROOT "${ITK_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5")
-# message("HDF5_ROOT: ${HDF5_ROOT}")
+get_filename_component(ITK_ROOT_DIR ${ITK_USE_FILE} DIRECTORY)
+get_filename_component(ITK_ROOT_DIR "${ITK_ROOT_DIR}/../" ABSOLUTE)
+message("ITK_ROOT_DIR: ${ITK_ROOT_DIR}")
+set(H5_src "${ITK_ROOT_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/src")
+set(H5_build "${ITK_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/src")
+set(H5_hl "${ITK_ROOT_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/hl/src")
 
-# set(HDF5_NO_FIND_PACKAGE_CONFIG_FILE TRUE)
-# find_package(hdf5 COMPONENTS C HL CONFIG)
 
 # satisfy netCDF's need for HDF5 definitions
-set(HDF5_INCLUDE_DIR ${ITKHDF5_INCLUDE_DIRS}) # this needs to be one directory, containing H5pubconf.h and hdf5.h
-message("ITKHDF5_INCLUDE_DIRS: ${ITKHDF5_INCLUDE_DIRS}")
-# set(HDF5_INCLUDE_DIR "${ITK_SOURCE_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/src")
-# message("HDF5_INCLUDE_DIR: ${HDF5_INCLUDE_DIR}")
+set(HDF5_INCLUDE_DIR "${H5_build};${H5_src};${H5_hl}")
+message("HDF5_INCLUDE_DIR: ${HDF5_INCLUDE_DIR}")
 set(HDF5_VERSION "1.12.1")
 # set(HDF5_C_LIBRARY ${ITKHDF5_LIBRARIES})
 # set(HDF5_HL_LIBRARY ${ITKHDF5_LIBRARIES})
@@ -128,7 +123,7 @@ set(BUILD_SHARED_LIBS ${_itk_build_shared})
 
 list(APPEND IOOMEZarrNGFF_LIBRARIES netCDF::netcdf)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-dump_cmake_variables()
+# dump_cmake_variables("HDF5")
 include(ITKModuleExternal)
 
 # find_package(xtensor-zarr CONFIG)
