@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.16.3)
+cmake_policy(SET CMP0135 NEW)
+
 project(IOOMEZarrNGFF)
 
 set(IOOMEZarrNGFF_LIBRARIES IOOMEZarrNGFF)
@@ -79,9 +81,9 @@ set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES})
 #   GIT_TAG        hdf5-1_12_2
 # )
 
-get_filename_component(ITK_SOURCE_DIR ${ITK_USE_FILE} DIRECTORY)
-get_filename_component(ITK_SOURCE_DIR "${ITK_SOURCE_DIR}/../" ABSOLUTE)
-message("ITK_SOURCE_DIR: ${ITK_SOURCE_DIR}")
+# get_filename_component(ITK_SOURCE_DIR ${ITK_USE_FILE} DIRECTORY)
+# get_filename_component(ITK_SOURCE_DIR "${ITK_SOURCE_DIR}/../" ABSOLUTE)
+# message("ITK_SOURCE_DIR: ${ITK_SOURCE_DIR}")
 # set(BUILD_GENERATOR ${CMAKE_GENERATOR})
 # set(HDF5_ROOT "${ITK_SOURCE_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/config/cmake/scripts")
 # set(HDF5_ROOT "${ITK_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5")
