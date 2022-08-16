@@ -32,12 +32,10 @@ function(dump_cmake_variables)
     endforeach()
 endfunction()
 
-# message("before everything")
-# dump_cmake_variables()
-
 include(FetchContent)
 set(_itk_build_testing ${BUILD_TESTING})
-set(BUILD_TESTING OFF)
+set(BUILD_TESTING OFF CACHE BOOL "tests" FORCE)
+
 set(_itk_build_shared ${BUILD_SHARED_LIBS})
 
 find_package(ITK 5.0 REQUIRED)
@@ -45,16 +43,20 @@ list(APPEND CMAKE_MODULE_PATH ${ITK_CMAKE_DIR})
 # list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# message("after find ITK")
-# dump_cmake_variables()
+# dump_cmake_variables("ZLIB")
 
 # Now specify all the libraries we want to fetch and compile
+set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES})
+set(ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS})
+add_library(ZLIB::ZLIB ALIAS ${ITKZLIB_LIBRARIES})
 set(BUILD_CURL_EXE OFF)
 FetchContent_Declare(
   CURL
   GIT_REPOSITORY https://github.com/curl/curl
   GIT_TAG        curl-7_84_0
 )
+FetchContent_MakeAvailable(CURL)
+dump_cmake_variables("CURL")
 
 # set(BUILD_DOC OFF)
 # set(BUILD_EXAMPLES OFF)
@@ -67,10 +69,16 @@ set(ENABLE_ZSTD OFF)
 #   GIT_REPOSITORY https://github.com/nih-at/libzip
 #   GIT_TAG        v1.9.2
 # )
+# FetchContent_MakeAvailable(libzip)
 
-set(ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS})
-set(netCDF_ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS})
-set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES})
+# netCDF needs zlib and curl
+set(ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS} CACHE PATH "Path to zlib include" FORCE)
+set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES} CACHE FILEPATH "Path to zlib library" FORCE)
+
+set(CURL_INCLUDE_DIR "${CURL_SOURCE_DIR}/include" CACHE PATH "Path to zlib include" FORCE)
+set(CURL_LIBRARY_DEBUG ${LIBCURL_OUTPUT_NAME} CACHE FILEPATH "Path to zlib library" FORCE)
+set(CURL_LIBRARY_RELEASE ${LIBCURL_OUTPUT_NAME} CACHE FILEPATH "Path to zlib library" FORCE)
+
 
 # message("before FetchContent_Declare")
 # dump_cmake_variables("ITK_")
@@ -94,6 +102,9 @@ set(HDF5_LIBRARIES ${ITKHDF5_LIBRARIES})
 # message("after find HDF5")
 # dump_cmake_variables("HDF5")
 
+set(BUILD_TESTSETS OFF CACHE BOOL "netCDF tests" FORCE)
+set(ENABLE_TESTS OFF CACHE BOOL "netCDF tests" FORCE)
+set(BUILD_UTILITIES OFF CACHE BOOL "netCDF tools" FORCE)
 FetchContent_Declare(
   netCDF
   GIT_REPOSITORY https://github.com/dzenanz/netcdf-c # we need a fork, otherwise it is to hard to provide HDF5 to netCDF
@@ -103,14 +114,14 @@ FetchContent_Declare(
 # message("HDF5 after FetchContent_Declare")
 # dump_cmake_variables("HDF5")
 
-FetchContent_MakeAvailable(CURL netCDF) # libzip
+FetchContent_MakeAvailable(netCDF)
 
 # message("after FetchContent_MakeAvailable")
 # dump_cmake_variables()
 
 # Restore build options
-set(BUILD_TESTING ${_itk_build_testing})
-set(BUILD_SHARED_LIBS ${_itk_build_shared})
+set(BUILD_TESTING ${_itk_build_testing} CACHE BOOL "tests" FORCE)
+set(BUILD_SHARED_LIBS ${_itk_build_shared} CACHE BOOL "DLLs" FORCE)
 
 # find_package(netCDF)
 
