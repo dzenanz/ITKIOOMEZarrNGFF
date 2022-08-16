@@ -56,7 +56,7 @@ FetchContent_Declare(
   GIT_TAG        curl-7_84_0
 )
 FetchContent_MakeAvailable(CURL)
-dump_cmake_variables("CURL")
+# dump_cmake_variables("CURL")
 
 # set(BUILD_DOC OFF)
 # set(BUILD_EXAMPLES OFF)
@@ -85,7 +85,7 @@ set(CURL_LIBRARY_RELEASE ${LIBCURL_OUTPUT_NAME} CACHE FILEPATH "Path to zlib lib
 
 get_filename_component(ITK_ROOT_DIR ${ITK_USE_FILE} DIRECTORY)
 get_filename_component(ITK_ROOT_DIR "${ITK_ROOT_DIR}/../" ABSOLUTE)
-message("ITK_ROOT_DIR: ${ITK_ROOT_DIR}")
+# message("ITK_ROOT_DIR: ${ITK_ROOT_DIR}")
 set(H5_src "${ITK_ROOT_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/src")
 set(H5_build "${ITK_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/src")
 set(H5_hl "${ITK_ROOT_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/hl/src")
@@ -93,7 +93,7 @@ set(H5_hl "${ITK_ROOT_DIR}/Modules/ThirdParty/HDF5/src/itkhdf5/hl/src")
 
 # satisfy netCDF's need for HDF5 definitions
 set(HDF5_INCLUDE_DIR "${H5_build};${H5_src};${H5_hl}")
-message("HDF5_INCLUDE_DIR: ${HDF5_INCLUDE_DIR}")
+# message("HDF5_INCLUDE_DIR: ${HDF5_INCLUDE_DIR}")
 set(HDF5_VERSION "1.12.1")
 # set(HDF5_C_LIBRARY ${ITKHDF5_LIBRARIES})
 # set(HDF5_HL_LIBRARY ${ITKHDF5_LIBRARIES})
@@ -125,6 +125,8 @@ set(BUILD_SHARED_LIBS ${_itk_build_shared} CACHE BOOL "DLLs" FORCE)
 
 # find_package(netCDF)
 
+list(APPEND IOOMEZarrNGFF_INCLUDE_DIRS ${netCDF_SOURCE_DIR}/include)
+# message("IOOMEZarrNGFF_INCLUDE_DIRS: ${IOOMEZarrNGFF_INCLUDE_DIRS}")
 list(APPEND IOOMEZarrNGFF_LIBRARIES netCDF::netcdf)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # dump_cmake_variables("HDF5")
@@ -141,3 +143,5 @@ include(ITKModuleExternal)
 #   set(ITK_DIR ${CMAKE_BINARY_DIR})
 #   itk_module_impl()
 # endif()
+
+# dump_cmake_variables("IOOMEZarrNGFF")
