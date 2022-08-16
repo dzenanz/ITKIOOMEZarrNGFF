@@ -36,9 +36,9 @@ OMEZarrNGFFImageIO::OMEZarrNGFFImageIO()
   this->AddSupportedReadExtension(".zr3");
   this->AddSupportedReadExtension(".zip");
 
-   this->Self::SetCompressor("");
-   this->Self::SetMaximumCompressionLevel(9);
-   this->Self::SetCompressionLevel(2);
+  this->Self::SetCompressor("");
+  this->Self::SetMaximumCompressionLevel(9);
+  this->Self::SetCompressionLevel(2);
 }
 
 
@@ -48,17 +48,16 @@ OMEZarrNGFFImageIO::PrintSelf(std::ostream & os, Indent indent) const
   Superclass::PrintSelf(os, indent); // TODO: either add stuff here, or remove this override
 }
 
-int ncid = 0;
-
 bool
 OMEZarrNGFFImageIO::CanReadFile(const char * filename)
 {
   try
   {
-    int result = nc_open(filename, NC_NOWRITE, &ncid);
+    int result = nc_open(getNCFilename(filename), NC_NOWRITE, &m_NCID);
+    std::cout << "netCDF error: " << nc_strerror(result) << std::endl;
     if (!result) // if it was opened correctly, we should close it
     {
-      nc_close(ncid);
+      nc_close(m_NCID);
       return true;
     }
     return false;
@@ -69,6 +68,13 @@ OMEZarrNGFFImageIO::CanReadFile(const char * filename)
   }
 }
 
+#define netCDF_call(call)                                  \
+  int r = call;                                            \
+  if (r) /* error */                                       \
+  {                                                        \
+    nc_close(m_NCID); /* clean up a little */              \
+    itkExceptionMacro("netCDF error: " << nc_strerror(r)); \
+  }
 
 void
 OMEZarrNGFFImageIO::ReadImageInformation()
@@ -78,23 +84,26 @@ OMEZarrNGFFImageIO::ReadImageInformation()
     itkExceptionMacro("FileName has not been set.");
   }
 
+  netCDF_call(nc_open(getNCFilename(this->m_FileName), NC_NOWRITE, &m_NCID));
+
+
   // xt::xzarr_file_system_store store(this->m_FileName);
-  // 
+  //
   // auto        h = xt::get_zarr_hierarchy(store, "");
   // auto        node = h["/"];
   // std::string nodes = h.get_nodes("/").dump();
   // std::cout << nodes << std::endl;
   // std::string children = h.get_children("/").dump();
   // std::cout << children << std::endl;
-  // 
+  //
   // xt::zarray         z = h.get_array("/image/0"); // TODO: do not hard-code a prefix.
   // const unsigned int nDims = z.dimension();
   // this->SetNumberOfDimensions(nDims - 1);
-  // 
+  //
   // std::vector<size_t> shape(z.shape().crbegin(), z.shape().crend()); // construct in reverse via iterators
   // this->SetComponentType(IOComponentEnum::FLOAT);                    // TODO: determine this programatically
   // this->SetNumberOfComponents(shape[0]);
-  // 
+  //
   // for (unsigned int i = 0; i < nDims - 1; ++i)
   // {
   //   this->SetDimensions(i, shape[i + 1]);
@@ -114,9 +123,9 @@ OMEZarrNGFFImageIO::Read(void * buffer)
     // xt::xzarr_file_system_store store(this->m_FileName);
     // auto                        h = xt::get_zarr_hierarchy(store);
     // xt::zarray                  z = h.get_array("/image/0");
-    // 
+    //
     // float * data = static_cast<float *>(buffer);
-    // 
+    //
     // size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
     // auto   dArray = xt::adapt(data, size, xt::no_ownership(), z.shape());
     // dArray.assign(z.get_array<float>());
@@ -154,9 +163,9 @@ void
 OMEZarrNGFFImageIO::Write(const void * buffer)
 {
   // xt::xzarr_file_system_store fsStore(this->m_FileName);
-  // 
+  //
   // auto zarrHierarchy = xt::create_zarr_hierarchy(fsStore);
-  // 
+  //
   // nlohmann::json attributes = { "multiscales",
   //                               { { "name",
   //                                   "image",
@@ -172,9 +181,9 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   //                                   "gaussian",
   //                                   "metadata",
   //                                   { "method", "not_implemented" } } } };
-  // 
+  //
   // zarrHierarchy.create_group("/image", attributes);
-  // 
+  //
   // if (this->GetLargestRegion() != m_IORegion)
   // {
   //   // Stream the data in chunks
@@ -183,7 +192,7 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   // {
   //   // Write all at once
   // }
-  // 
+  //
   // const unsigned int  nDims = this->GetNumberOfDimensions();
   // std::vector<size_t> shape;
   // std::vector<size_t> chunk_shape;
@@ -195,7 +204,7 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   // }
   // shape.push_back(this->GetNumberOfComponents());
   // chunk_shape.push_back(this->GetNumberOfComponents());
-  // 
+  //
   // // specify options
   // xt::xzarr_create_array_options<xt::xio_blosc_config> o;
   // o.chunk_memory_layout = 'C';
@@ -203,18 +212,18 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   // // o.attrs = attributes;
   // // o.chunk_pool_size = 2;
   // o.fill_value = 0.0;
-  // 
+  //
   // xt::zarray z = zarrHierarchy.create_array("/image/0",  // path to the array in the store
   //                                           shape,       // array shape
   //                                           chunk_shape, // chunk shape
   //                                           "f4",        // data type, here 32-bit floating point
   //                                           o            // options
   // );
-  // 
+  //
   // const float * data = static_cast<const float *>(buffer);
-  // 
+  //
   // size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
-  // 
+  //
   // auto dArray = xt::adapt(data, size, xt::no_ownership(), shape);
   // z.assign(dArray);
 }
