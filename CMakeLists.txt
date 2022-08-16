@@ -33,6 +33,9 @@ function(dump_cmake_variables)
 endfunction()
 
 include(FetchContent)
+if(NOT DEFINED BUILD_TESTING)
+  set(BUILD_TESTING TRUE CACHE BOOL "Should ${PROJECT_NAME} tests be built?")
+endif()
 set(_itk_build_testing ${BUILD_TESTING})
 set(BUILD_TESTING OFF CACHE BOOL "tests" FORCE)
 
@@ -105,6 +108,7 @@ set(HDF5_LIBRARIES ${ITKHDF5_LIBRARIES})
 set(BUILD_TESTSETS OFF CACHE BOOL "netCDF tests" FORCE)
 set(ENABLE_TESTS OFF CACHE BOOL "netCDF tests" FORCE)
 set(BUILD_UTILITIES OFF CACHE BOOL "netCDF tools" FORCE)
+set(ENABLE_DAP2 ON CACHE BOOL "Enable LDAP2 in netCDF" FORCE)
 FetchContent_Declare(
   netCDF
   GIT_REPOSITORY https://github.com/dzenanz/netcdf-c # we need a fork, otherwise it is to hard to provide HDF5 to netCDF
@@ -125,9 +129,24 @@ set(BUILD_SHARED_LIBS ${_itk_build_shared} CACHE BOOL "DLLs" FORCE)
 
 # find_package(netCDF)
 
-list(APPEND IOOMEZarrNGFF_INCLUDE_DIRS ${netCDF_SOURCE_DIR}/include)
+function (_get_all_cmake_targets out_var current_dir)
+    get_property(targets DIRECTORY ${current_dir} PROPERTY BUILDSYSTEM_TARGETS)
+    get_property(subdirs DIRECTORY ${current_dir} PROPERTY SUBDIRECTORIES)
+
+    foreach(subdir ${subdirs})
+        _get_all_cmake_targets(subdir_targets ${subdir})
+        list(APPEND targets ${subdir_targets})
+    endforeach()
+
+    set(${out_var} ${targets} PARENT_SCOPE)
+endfunction()
+
+# Run at end of top-level CMakeLists
+_get_all_cmake_targets(all_targets ${CMAKE_CURRENT_LIST_DIR})
+
+list(APPEND IOOMEZarrNGFF_INCLUDE_DIRS ${netCDF_SOURCE_DIR}/include ${HDF5_INCLUDE_DIR} ${ITKHDF5_INCLUDE_DIRS})
 # message("IOOMEZarrNGFF_INCLUDE_DIRS: ${IOOMEZarrNGFF_INCLUDE_DIRS}")
-list(APPEND IOOMEZarrNGFF_LIBRARIES netCDF::netcdf)
+list(APPEND IOOMEZarrNGFF_LIBRARIES netCDF::netcdf ${HDF5_LIBRARIES})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # dump_cmake_variables("HDF5")
 include(ITKModuleExternal)
