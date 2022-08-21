@@ -135,10 +135,8 @@ protected:
   }
 
   int m_NCID = 0;
-  int m_NCvarID = 0;
-  int m_NCdimIDs[MaximumDimension] = { 0 };
 
-  const std::vector<std::string> dimensionNames = { "i", "j", "k", "c", "t" };
+  const std::vector<std::string> dimensionNames = { "x", "y", "z", "c", "t" };
 
   std::string m_ncFilename;
 
