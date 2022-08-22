@@ -48,51 +48,47 @@ OMEZarrNGFFImageIO::PrintSelf(std::ostream & os, Indent indent) const
   Superclass::PrintSelf(os, indent); // TODO: either add stuff here, or remove this override
 }
 
-// IOComponentEnum
-// netCDFToITKComponentType(const int netCDFComponentType) const
-//{
-//  switch (nrrdComponentType)
-//  {
-//    case nrrdTypeUnknown:
-//    case nrrdTypeBlock:
-//      return IOComponentEnum::UNKNOWNCOMPONENTTYPE;
-//
-//    case nrrdTypeChar:
-//      return IOComponentEnum::CHAR;
-//
-//    case nrrdTypeUChar:
-//      return IOComponentEnum::UCHAR;
-//
-//    case nrrdTypeShort:
-//      return IOComponentEnum::SHORT;
-//
-//    case nrrdTypeUShort:
-//      return IOComponentEnum::USHORT;
-//
-//    case nrrdTypeInt:
-//      return IOComponentEnum::INT;
-//
-//    case nrrdTypeUInt:
-//      return IOComponentEnum::UINT;
-//
-//    case nrrdTypeLLong:
-//      return IOComponentEnum::LONGLONG;
-//
-//    case nrrdTypeULLong:
-//      return IOComponentEnum::ULONGLONG;
-//
-//    case nrrdTypeFloat:
-//      return IOComponentEnum::FLOAT;
-//
-//    case nrrdTypeDouble:
-//      return IOComponentEnum::DOUBLE;
-//  }
-//  // Strictly to avoid compiler warning regarding "control may reach end of
-//  // non-void function":
-//  return IOComponentEnum::UNKNOWNCOMPONENTTYPE;
-//}
+IOComponentEnum
+netCDFToITKComponentType(const nc_type netCDFComponentType)
+{
+  switch (netCDFComponentType)
+  {
+    case NC_BYTE:
+      return IOComponentEnum::CHAR;
 
-int
+    case NC_UBYTE:
+      return IOComponentEnum::UCHAR;
+
+    case NC_SHORT:
+      return IOComponentEnum::SHORT;
+
+    case NC_USHORT:
+      return IOComponentEnum::USHORT;
+
+    case NC_INT:
+      return IOComponentEnum::INT;
+
+    case NC_UINT:
+      return IOComponentEnum::UINT;
+
+    case NC_INT64:
+      return IOComponentEnum::LONGLONG;
+
+    case NC_UINT64:
+      return IOComponentEnum::ULONGLONG;
+
+    case NC_FLOAT:
+      return IOComponentEnum::FLOAT;
+
+    case NC_DOUBLE:
+      return IOComponentEnum::DOUBLE;
+
+    default:
+      return IOComponentEnum::UNKNOWNCOMPONENTTYPE;
+  }
+}
+
+nc_type
 itkToNetCDFComponentType(const IOComponentEnum itkComponentType)
 {
   switch (itkComponentType)
@@ -138,31 +134,39 @@ itkToNetCDFComponentType(const IOComponentEnum itkComponentType)
 
     case IOComponentEnum::DOUBLE:
       return NC_DOUBLE;
+
     case IOComponentEnum::LDOUBLE:
       return NC_NAT; // Long double not supported by netCDF
+
+    default:
+      return NC_NAT;
   }
-  // Strictly to avoid compiler warning regarding "control may reach end of
-  // non-void function":
-  return NC_NAT;
 }
 
 
 bool
 OMEZarrNGFFImageIO::CanReadFile(const char * filename)
 {
-  if (!this->HasSupportedWriteExtension(filename, true))
-  {
-    return false;
-  }
+  // if (!this->HasSupportedWriteExtension(filename, true))
+  //{
+  //  return false;
+  //}
 
   try
   {
     int result = nc_open(getNCFilename(filename), NC_NOWRITE, &m_NCID);
-    std::cout << "netCDF error: " << nc_strerror(result) << std::endl;
+    if (this->GetDebug())
+    {
+      std::cout << "netCDF error: " << nc_strerror(result) << std::endl;
+    }
+
     if (!result) // if it was opened correctly, we should close it
     {
+      int nVars;
+      result = nc_inq(m_NCID, nullptr, &nVars, nullptr, nullptr);
+
       nc_close(m_NCID);
-      return true;
+      return !result && (nVars > 0);
     }
     return false;
   }
@@ -193,60 +197,101 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   int r;
   netCDF_call(nc_open(getNCFilename(this->m_FileName), NC_NOWRITE, &m_NCID));
 
-  int              m_NCvarID = 0;
-  int              ntypes;
-  std::vector<int> typeids;
+  int nDims;
+  int nVars;
+  int nAttr; // we will ignore attributes for now
+  netCDF_call(nc_inq(m_NCID, &nDims, &nVars, &nAttr, nullptr));
 
-  int m_NCdimIDs[MaximumDimension] = { 0 };
+  if (nVars == 0)
+  {
+    itkWarningMacro("The file '" << this->m_FileName << "' contains no arrays.");
+    return;
+  }
 
-  netCDF_call(nc_inq_typeids(m_NCID, &ntypes, nullptr));
-  typeids.resize(ntypes);
+  char    name[NC_MAX_NAME + 1];
+  nc_type ncType;
+  int     dimIDs[NC_MAX_VAR_DIMS];
+  netCDF_call(nc_inq_var(m_NCID, 0, name, &ncType, &nDims, dimIDs, nullptr));
 
-  IOComponentEnum cmpType = IOComponentEnum::UNKNOWNCOMPONENTTYPE;
-  this->SetComponentType(cmpType);
+  if (nVars > 1)
+  {
+    itkWarningMacro("The file '" << this->m_FileName << "' contains more than one array. The first one (" << name
+                                 << ") will be read. The others will be ignored. ");
+  }
 
-  // xt::xzarr_file_system_store store(this->m_FileName);
-  //
-  // auto        h = xt::get_zarr_hierarchy(store, "");
-  // auto        node = h["/"];
-  // std::string nodes = h.get_nodes("/").dump();
-  // std::cout << nodes << std::endl;
-  // std::string children = h.get_children("/").dump();
-  // std::cout << children << std::endl;
-  //
-  // xt::zarray         z = h.get_array("/image/0"); // TODO: do not hard-code a prefix.
-  // const unsigned int nDims = z.dimension();
-  // this->SetNumberOfDimensions(nDims - 1);
-  //
-  // std::vector<size_t> shape(z.shape().crbegin(), z.shape().crend()); // construct in reverse via iterators
-  // this->SetComponentType(IOComponentEnum::FLOAT);                    // TODO: determine this programatically
-  // this->SetNumberOfComponents(shape[0]);
-  //
-  // for (unsigned int i = 0; i < nDims - 1; ++i)
-  // {
-  //   this->SetDimensions(i, shape[i + 1]);
-  // }
+  // TODO: examine all the variables, and prefer the one named 'image' or '0'
+
+  int    cDim = 0;
+  size_t len;
+  netCDF_call(nc_inq_dim(m_NCID, dimIDs[nDims - 1], name, &len));
+  if (std::string(name) == "c") // last dimension is component
+  {
+    cDim = 1;
+    this->SetNumberOfComponents(len);
+    this->SetPixelType(CommonEnums::IOPixel::VECTOR); // TODO: RGB/A, Tensor etc.
+  }
+
+  this->SetNumberOfDimensions(nDims - cDim);
+  for (unsigned d = 0; d < nDims - cDim; ++d)
+  {
+    netCDF_call(nc_inq_dim(m_NCID, dimIDs[d], name, &len));
+    this->SetDimensions(nDims - cDim - d - 1, len);
+  }
+
+  this->SetComponentType(netCDFToITKComponentType(ncType));
 }
 
 
 void
 OMEZarrNGFFImageIO::Read(void * buffer)
 {
+  int r;
   if (this->GetLargestRegion() != m_IORegion)
   {
     // Stream the data in chunks
   }
   else
   {
-    // xt::xzarr_file_system_store store(this->m_FileName);
-    // auto                        h = xt::get_zarr_hierarchy(store);
-    // xt::zarray                  z = h.get_array("/image/0");
-    //
-    // float * data = static_cast<float *>(buffer);
-    //
-    // size_t size = m_IORegion.GetNumberOfPixels() * this->GetNumberOfComponents();
-    // auto   dArray = xt::adapt(data, size, xt::no_ownership(), z.shape());
-    // dArray.assign(z.get_array<float>());
+    int     varID = 0; // always zero for now
+    nc_type netCDF_type = itkToNetCDFComponentType(this->GetComponentType());
+    switch (netCDF_type)
+    {
+      case NC_BYTE:
+        netCDF_call(nc_get_var_text(m_NCID, varID, static_cast<char *>(buffer)));
+        break;
+      case NC_UBYTE:
+        netCDF_call(nc_get_var_ubyte(m_NCID, varID, static_cast<unsigned char *>(buffer)));
+        break;
+      case NC_SHORT:
+        netCDF_call(nc_get_var_short(m_NCID, varID, static_cast<short *>(buffer)));
+        break;
+      case NC_USHORT:
+        netCDF_call(nc_get_var_ushort(m_NCID, varID, static_cast<unsigned short *>(buffer)));
+        break;
+      case NC_INT:
+        netCDF_call(nc_get_var_int(m_NCID, varID, static_cast<int *>(buffer)));
+        break;
+      case NC_UINT:
+        netCDF_call(nc_get_var_uint(m_NCID, varID, static_cast<unsigned int *>(buffer)));
+        break;
+      case NC_INT64:
+        netCDF_call(nc_get_var_longlong(m_NCID, varID, static_cast<long long *>(buffer)));
+        break;
+      case NC_UINT64:
+        netCDF_call(nc_get_var_ulonglong(m_NCID, varID, static_cast<unsigned long long *>(buffer)));
+        break;
+      case NC_FLOAT:
+        netCDF_call(nc_get_var_float(m_NCID, varID, static_cast<float *>(buffer)));
+        break;
+      case NC_DOUBLE:
+        netCDF_call(nc_get_var_double(m_NCID, varID, static_cast<double *>(buffer)));
+        break;
+      default:
+        itkExceptionMacro("Unsupported component type: " << this->GetComponentTypeAsString(this->m_ComponentType));
+        break;
+    }
+
+    netCDF_call(nc_close(m_NCID));
   }
 }
 
