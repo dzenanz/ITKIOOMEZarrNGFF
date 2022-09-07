@@ -27,6 +27,13 @@ CreateTestDriver(IOOMEZarrNGFF "${IOOMEZarrNGFF-Test_LIBRARIES}" "${IOOMEZarrNGF
 #       ${ITK_TEST_OUTPUT_DIR}/SmallSpectra.zip
 #   )
 
+itk_add_test(NAME itkOMEZarrNGFFImageIOTestBug
+  COMMAND IOOMEZarrNGFFTestDriver
+    itkOMEZarrNGFFImageIOTestBug
+      DATA{Input/cthead1.mha}
+      ${ITK_TEST_OUTPUT_DIR}/cthead1.zarr
+  )
+
 itk_add_test(NAME itkOMEZarrNGFFImageIOReadConvertTest
   COMMAND IOOMEZarrNGFFTestDriver
     --compare
