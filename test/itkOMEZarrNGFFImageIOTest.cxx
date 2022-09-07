@@ -116,16 +116,16 @@ itkOMEZarrNGFFImageIOTest(int argc, char * argv[])
   switch (componentType)
   {
     case itk::ImageIOBase::IOComponentEnum::UCHAR:
-      return doTest<float>(inputFileName, outputFileName, dim);
+      return doTest<unsigned char>(inputFileName, outputFileName, dim);
       break;
     case itk::ImageIOBase::IOComponentEnum::CHAR:
-      return doTest<float>(inputFileName, outputFileName, dim);
+      return doTest<char>(inputFileName, outputFileName, dim);
       break;
     case itk::ImageIOBase::IOComponentEnum::USHORT:
-      return doTest<float>(inputFileName, outputFileName, dim);
+      return doTest<unsigned short>(inputFileName, outputFileName, dim);
       break;
     case itk::ImageIOBase::IOComponentEnum::SHORT:
-      return doTest<float>(inputFileName, outputFileName, dim);
+      return doTest<short>(inputFileName, outputFileName, dim);
       break;
     case itk::ImageIOBase::IOComponentEnum::FLOAT:
       return doTest<float>(inputFileName, outputFileName, dim);
