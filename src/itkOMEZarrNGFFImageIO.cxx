@@ -41,8 +41,6 @@ OMEZarrNGFFImageIO::OMEZarrNGFFImageIO()
   this->Self::SetCompressionLevel(2);
 }
 
-const std::vector<std::string> preferred_groups = { "image", "0", "image/0", "0/image" };
-
 void
 OMEZarrNGFFImageIO::PrintSelf(std::ostream & os, Indent indent) const
 {
@@ -222,21 +220,6 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   int nAttr; // we will ignore attributes for now
   netCDF_call(nc_inq(m_NCID, &nDims, &nVars, &nAttr, nullptr));
 
-  unsigned i = 0;
-  do
-  {
-    int ncid;
-    if (nc_inq_grp_ncid(m_NCID, preferred_groups[i].c_str(), &ncid) != NC_NOERR)
-    {
-      ++i;
-      continue;
-    }
-
-    netCDF_call(nc_inq(ncid, &nDims, &nVars, &nAttr, nullptr));
-    ++i;
-  } while (nVars == 0 && i < preferred_groups.size());
-
-  
   if (nVars == 0)
   {
     m_GroupID = findBiggestArray(m_NCID, m_NCID, 0);
@@ -394,6 +377,9 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   int netCDF_type = itkToNetCDFComponentType(this->m_ComponentType);
   int varID;
   netCDF_call(nc_def_var(m_NCID, "image", netCDF_type, nDims + cDims, dimIDs, &varID));
+
+  // if we don't define units, there are problems reading the file later
+  netCDF_call(nc_put_att_text(m_NCID, varID, "units", 4, "au")); // for arbitrary units
   netCDF_call(nc_enddef(m_NCID));
 
   switch (netCDF_type)
