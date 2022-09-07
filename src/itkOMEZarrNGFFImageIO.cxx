@@ -41,6 +41,7 @@ OMEZarrNGFFImageIO::OMEZarrNGFFImageIO()
   this->Self::SetCompressionLevel(2);
 }
 
+const std::vector<std::string> preferred_groups = { "image", "0", "image/0", "0/image" };
 
 void
 OMEZarrNGFFImageIO::PrintSelf(std::ostream & os, Indent indent) const
@@ -187,6 +188,24 @@ OMEZarrNGFFImageIO::CanReadFile(const char * filename)
     itkExceptionMacro("netCDF error: " << nc_strerror(r)); \
   }
 
+// Return NCID of the biggest array,
+// after recursively searching all the subgroups of provided groupID.
+int
+findBiggestArray(int groupID, int bestNCID, SizeValueType biggestArraySize)
+{
+  int numGroups;
+  nc_inq_grps(groupID, &numGroups, nullptr);
+  if (numGroups == 0)
+  {
+    return bestNCID;
+  }
+
+  std::vector<int> groupIDs(numGroups);
+  nc_inq_grps(groupID, &numGroups, &groupIDs[0]);
+
+  return bestNCID; // TODO: update
+}
+
 void
 OMEZarrNGFFImageIO::ReadImageInformation()
 {
@@ -203,6 +222,30 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   int nAttr; // we will ignore attributes for now
   netCDF_call(nc_inq(m_NCID, &nDims, &nVars, &nAttr, nullptr));
 
+  unsigned i = 0;
+  do
+  {
+    int ncid;
+    if (nc_inq_grp_ncid(m_NCID, preferred_groups[i].c_str(), &ncid) != NC_NOERR)
+    {
+      ++i;
+      continue;
+    }
+
+    netCDF_call(nc_inq(ncid, &nDims, &nVars, &nAttr, nullptr));
+    ++i;
+  } while (nVars == 0 && i < preferred_groups.size());
+
+  
+  if (nVars == 0)
+  {
+    m_GroupID = findBiggestArray(m_NCID, m_NCID, 0);
+  }
+  else
+  {
+    m_GroupID = m_NCID;
+  }
+
   if (nVars == 0)
   {
     itkWarningMacro("The file '" << this->m_FileName << "' contains no arrays.");
@@ -212,7 +255,7 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   char    name[NC_MAX_NAME + 1];
   nc_type ncType;
   int     dimIDs[NC_MAX_VAR_DIMS];
-  netCDF_call(nc_inq_var(m_NCID, 0, name, &ncType, &nDims, dimIDs, nullptr));
+  netCDF_call(nc_inq_var(m_GroupID, 0, name, &ncType, &nDims, dimIDs, nullptr));
 
   if (nVars > 1)
   {
@@ -220,11 +263,9 @@ OMEZarrNGFFImageIO::ReadImageInformation()
                                  << ") will be read. The others will be ignored. ");
   }
 
-  // TODO: examine all the variables, and prefer the one named 'image' or '0'
-
   int    cDim = 0;
   size_t len;
-  netCDF_call(nc_inq_dim(m_NCID, dimIDs[nDims - 1], name, &len));
+  netCDF_call(nc_inq_dim(m_GroupID, dimIDs[nDims - 1], name, &len));
   if (std::string(name) == "c") // last dimension is component
   {
     cDim = 1;
@@ -235,7 +276,7 @@ OMEZarrNGFFImageIO::ReadImageInformation()
   this->SetNumberOfDimensions(nDims - cDim);
   for (unsigned d = 0; d < nDims - cDim; ++d)
   {
-    netCDF_call(nc_inq_dim(m_NCID, dimIDs[d], name, &len));
+    netCDF_call(nc_inq_dim(m_GroupID, dimIDs[d], name, &len));
     this->SetDimensions(nDims - cDim - d - 1, len);
   }
 
@@ -258,34 +299,34 @@ OMEZarrNGFFImageIO::Read(void * buffer)
     switch (netCDF_type)
     {
       case NC_BYTE:
-        netCDF_call(nc_get_var_text(m_NCID, varID, static_cast<char *>(buffer)));
+        netCDF_call(nc_get_var_text(m_GroupID, varID, static_cast<char *>(buffer)));
         break;
       case NC_UBYTE:
-        netCDF_call(nc_get_var_ubyte(m_NCID, varID, static_cast<unsigned char *>(buffer)));
+        netCDF_call(nc_get_var_ubyte(m_GroupID, varID, static_cast<unsigned char *>(buffer)));
         break;
       case NC_SHORT:
-        netCDF_call(nc_get_var_short(m_NCID, varID, static_cast<short *>(buffer)));
+        netCDF_call(nc_get_var_short(m_GroupID, varID, static_cast<short *>(buffer)));
         break;
       case NC_USHORT:
-        netCDF_call(nc_get_var_ushort(m_NCID, varID, static_cast<unsigned short *>(buffer)));
+        netCDF_call(nc_get_var_ushort(m_GroupID, varID, static_cast<unsigned short *>(buffer)));
         break;
       case NC_INT:
-        netCDF_call(nc_get_var_int(m_NCID, varID, static_cast<int *>(buffer)));
+        netCDF_call(nc_get_var_int(m_GroupID, varID, static_cast<int *>(buffer)));
         break;
       case NC_UINT:
-        netCDF_call(nc_get_var_uint(m_NCID, varID, static_cast<unsigned int *>(buffer)));
+        netCDF_call(nc_get_var_uint(m_GroupID, varID, static_cast<unsigned int *>(buffer)));
         break;
       case NC_INT64:
-        netCDF_call(nc_get_var_longlong(m_NCID, varID, static_cast<long long *>(buffer)));
+        netCDF_call(nc_get_var_longlong(m_GroupID, varID, static_cast<long long *>(buffer)));
         break;
       case NC_UINT64:
-        netCDF_call(nc_get_var_ulonglong(m_NCID, varID, static_cast<unsigned long long *>(buffer)));
+        netCDF_call(nc_get_var_ulonglong(m_GroupID, varID, static_cast<unsigned long long *>(buffer)));
         break;
       case NC_FLOAT:
-        netCDF_call(nc_get_var_float(m_NCID, varID, static_cast<float *>(buffer)));
+        netCDF_call(nc_get_var_float(m_GroupID, varID, static_cast<float *>(buffer)));
         break;
       case NC_DOUBLE:
-        netCDF_call(nc_get_var_double(m_NCID, varID, static_cast<double *>(buffer)));
+        netCDF_call(nc_get_var_double(m_GroupID, varID, static_cast<double *>(buffer)));
         break;
       default:
         itkExceptionMacro("Unsupported component type: " << this->GetComponentTypeAsString(this->m_ComponentType));

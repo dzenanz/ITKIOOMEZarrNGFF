@@ -135,6 +135,7 @@ protected:
   }
 
   int m_NCID = 0;
+  int m_GroupID = 0;
 
   const std::vector<std::string> dimensionNames = { "x", "y", "z", "c", "t" };
 
@@ -143,7 +144,7 @@ protected:
   const char *
   getNCFilename(const std::string & filename)
   {
-    m_ncFilename = "file://" + filename + "#mode=zarr,noxarray,file"; // TODO: support S3
+    m_ncFilename = "file://" + filename + "#mode=nczarr,noxarray,file"; // TODO: support S3
     return m_ncFilename.c_str();
   }
   const char *
