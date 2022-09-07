@@ -1,3 +1,21 @@
+/*=========================================================================
+ *
+ *  Copyright NumFOCUS
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         https://www.apache.org/licenses/LICENSE-2.0.txt
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *=========================================================================*/
+
 #include "itkImageFileWriter.h"
 #include "itkImageFileReader.h"
 
@@ -11,12 +29,12 @@
 
 // Make netCDF call, and error check it.
 // Requires variable int r; to be defined.
-#define netCDF_call(call)                                  \
-  r = call;                                                \
-  if (r) /* error */                                       \
-  {                                                        \
-    nc_close(m_NCID); /* clean up a little */              \
-    itkExceptionMacro("netCDF error: " << nc_strerror(r)); \
+#define netCDF_call(call)                                         \
+  r = call;                                                       \
+  if (r) /* error */                                              \
+  {                                                               \
+    nc_close(m_NCID); /* clean up a little */                     \
+    itkGenericExceptionMacro("netCDF error: " << nc_strerror(r)); \
   }
 
 int
@@ -67,11 +85,11 @@ itkOMEZarrNGFFImageIOTestBug(int argc, char * argv[])
   if ((res = nc_close(ncid)))
     BAIL(res);
 
-  
-  
+
   // Now read the file for sanity checking
   int m_NCID;
-  
+  int m_GroupID;
+
   // from OMEZarrNGFFImageIO::ReadImageInformation()
   int r;
   netCDF_call(nc_open(ncFilename.c_str(), NC_NOWRITE, &m_NCID));
@@ -83,8 +101,12 @@ itkOMEZarrNGFFImageIOTestBug(int argc, char * argv[])
 
   if (nVars == 0)
   {
-    itkWarningMacro("The file '" << ncFilename.c_str() << "' contains no arrays.");
-    return;
+    itkGenericOutputMacro("The file '" << ncFilename.c_str() << "' contains no arrays.");
+    return EXIT_FAILURE; // TODO: search recursively to establish m_GroupID
+  }
+  else
+  {
+    m_GroupID = m_NCID;
   }
 
   char    name[NC_MAX_NAME + 1];
@@ -94,34 +116,52 @@ itkOMEZarrNGFFImageIOTestBug(int argc, char * argv[])
 
   if (nVars > 1)
   {
-    itkWarningMacro("The file '" << ncFilename.c_str() << "' contains more than one array. The first one (" << name
-                                 << ") will be read. The others will be ignored. ");
+    itkGenericOutputMacro("The file '" << ncFilename.c_str() << "' contains more than one array. The first one ("
+                                       << name << ") will be read. The others will be ignored. ");
   }
 
+  size_t totalSize = 1;
   int    cDim = 0;
   size_t len;
   netCDF_call(nc_inq_dim(m_GroupID, dimIDs[nDims - 1], name, &len));
   if (std::string(name) == "c") // last dimension is component
   {
     cDim = 1;
-    this->SetNumberOfComponents(len);
-    this->SetPixelType(CommonEnums::IOPixel::VECTOR); // TODO: RGB/A, Tensor etc.
+    std::cout << "NumberOfComponents: " << len << std::endl;
+    totalSize *= len;
+    // this->SetNumberOfComponents(len);
+    // this->SetPixelType(itk::CommonEnums::IOPixel::VECTOR); // TODO: RGB/A, Tensor etc.
   }
 
-  this->SetNumberOfDimensions(nDims - cDim);
+  // this->SetNumberOfDimensions(nDims - cDim);
   for (unsigned d = 0; d < nDims - cDim; ++d)
   {
     netCDF_call(nc_inq_dim(m_GroupID, dimIDs[d], name, &len));
-    this->SetDimensions(nDims - cDim - d - 1, len);
+    std::cout << "Dim " << nDims - cDim - d - 1 << " (" << name << "): " << len << std::endl;
+    totalSize *= len;
+    // this->SetDimensions(nDims - cDim - d - 1, len);
   }
 
-  this->SetComponentType(netCDFToITKComponentType(ncType));
-  
+
   // from OMEZarrNGFFImageIO::Read(void * buffer)
-  
+
   int varID = 0; // always zero for now
-  netCDF_call(nc_get_var_short(m_GroupID, varID, static_cast<short *>(buffer)));
+
+  std::vector<short> buffer(totalSize);
+
+  netCDF_call(nc_get_var_short(m_GroupID, varID, &buffer[0]));
   netCDF_call(nc_close(m_NCID));
+
+  // compare contents of buffer with image
+  short * imageBuffer = image->GetBufferPointer();
+  for (size_t i = 0; i < totalSize; ++i)
+  {
+    if (buffer[i] != imageBuffer[i])
+    {
+      std::cout << "Diference at " << i << ": " << buffer[i] << " vs " << imageBuffer[i] << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
 
   return EXIT_SUCCESS;
 }
