@@ -110,7 +110,7 @@ FetchContent_MakeAvailable(CURL)
 
 # dump_cmake_variables("CURL")
 _get_all_cmake_targets(all_targets ${CMAKE_CURRENT_LIST_DIR})
-message("Targets: ${all_targets}")
+# message("Targets: ${all_targets}")
 # print_target_properties(libcurl)
 
 # set(BUILD_DOC OFF)
