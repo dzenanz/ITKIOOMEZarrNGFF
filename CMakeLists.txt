@@ -117,8 +117,7 @@ _get_all_cmake_targets(all_targets ${CMAKE_CURRENT_LIST_DIR})
 # set(BUILD_EXAMPLES OFF)
 # set(BUILD_REGRESS OFF)
 # set(BUILD_TOOLS OFF)
-set(netcdf_ENABLE_ZSTD OFF)
-set(ENABLE_ZSTD OFF)
+set(ENABLE_ZSTD OFF CACHE BOOL "netCDF zstd")
 # FetchContent_Declare(
 #   libzip
 #   GIT_REPOSITORY https://github.com/nih-at/libzip
