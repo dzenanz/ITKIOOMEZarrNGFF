@@ -12,7 +12,7 @@ jobs:
     strategy:
       max-parallel: 3
       matrix:
-        os: [windows-2019, macos-11]
+        os: [ubuntu-20.04, windows-2019, macos-11]
         include:
           - os: ubuntu-20.04
             c-compiler: "gcc"
@@ -181,11 +181,7 @@ jobs:
         export OPENSSL_INCLUDE_DIR=/usr/include
         export OPENSSL_CRYPTO_LIBRARY=/usr/lib/x86_64-linux-gnu/libcrypto.so
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
-        for tarball in "" "-manylinux2014"; do
-          rm -rf ITKPythonPackage
-          export TARBALL_SPECIALIZATION=${tarball}
-          ./dockcross-manylinux-download-cache-and-build-module-wheels.sh cp${{ matrix.python-version }}
-        done
+        ./dockcross-manylinux-download-cache-and-build-module-wheels.sh cp${{ matrix.python-version }}
 
     - name: Publish Python package as GitHub Artifact
       uses: actions/upload-artifact@v1
