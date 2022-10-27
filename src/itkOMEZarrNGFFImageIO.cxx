@@ -22,6 +22,9 @@
 
 #include "netcdf.h"
 
+#include "tensorstore/open.h"
+#include "tensorstore/index_space/dim_expression.h"
+
 namespace itk
 {
 
@@ -145,10 +148,25 @@ itkToNetCDFComponentType(const IOComponentEnum itkComponentType)
   }
 }
 
+bool
+checkOpen(std::string filename, std::string driver)
+{
+  auto openFuture =
+    tensorstore::Open({ { "driver", driver }, { "kvstore", { { "driver", "file" }, { "path", filename } } } },
+                      tensorstore::OpenMode::open,
+                      tensorstore::RecheckCached{ false },
+                      tensorstore::ReadWriteMode::read);
+
+  return openFuture.result().ok();
+}
 
 bool
 OMEZarrNGFFImageIO::CanReadFile(const char * filename)
 {
+  bool c0 = checkOpen(filename, "zarr");
+  bool c1 = checkOpen(filename + std::string("/.zattrs"), "json");
+  bool c2 = checkOpen(filename + std::string("/.zgroup"), "json");
+
   return this->HasSupportedWriteExtension(filename, true);
   // if (!this->HasSupportedWriteExtension(filename, true))
   //{
