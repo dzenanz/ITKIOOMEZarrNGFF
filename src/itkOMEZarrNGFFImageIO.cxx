@@ -182,7 +182,7 @@ OMEZarrNGFFImageIO::CanReadFile(const char * filename)
   ITK_NOOP_STATEMENT
 
 
-thread_local tensorstore::TensorStore<> store;
+thread_local tensorstore::TensorStore<> store; // initialized by ReadImageInformation
 
 void
 OMEZarrNGFFImageIO::ReadImageInformation()

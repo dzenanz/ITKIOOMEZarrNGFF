@@ -3,7 +3,7 @@ name: Build, test, package
 on: [push,pull_request]
 
 env:
-  itk-git-tag: "0827484a4369d273eedee3e07657ef452acb1110"
+  itk-git-tag: "f423f2d7c7b8f0c33eb2a4bd07561aae63e89ad0"
   itk-wheel-tag: "v5.3rc04.post3"
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     strategy:
       max-parallel: 3
       matrix:
-        os: [windows-2019, macos-11]
+        os: [ubuntu-20.04, windows-2019, macos-11]
         include:
           - os: ubuntu-20.04
             c-compiler: "gcc"
@@ -163,7 +163,7 @@ jobs:
     - name: 'Build 🐍 Python 📦 package'
       run: |
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
-        for tarball in "" "-manylinux2014"; do
+        for tarball in "-manylinux_2_28" "-manylinux2014"; do
           rm -rf ITKPythonPackage
           export TARBALL_SPECIALIZATION=${tarball}
           ./dockcross-manylinux-download-cache-and-build-module-wheels.sh cp${{ matrix.python-version }}
