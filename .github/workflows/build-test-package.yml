@@ -35,32 +35,16 @@ jobs:
       with:
         python-version: 3.8
 
+    - uses: shogo82148/actions-setup-perl@v1
+    - uses: ilammy/setup-nasm@v1
+
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install ninja
 
-    - name: Install Linux-specific build dependencies
-      if: matrix.os == 'ubuntu-20.04'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libcurl4-openssl-dev m4 libzip-dev
-
-    - name: Install MacOS-specific build dependencies
-      if: matrix.os == 'macos-10.15'
-      run: |
-        brew update
-        brew install m4 openssl@1.1
-
-    - name: Install Windows-specific build dependencies
-      if: matrix.os == 'windows-2019'
-      shell: bash
-      run: |
-        curl -L "https://data.kitware.com/api/v1/file/6320885f11dab81428207d00/download/m4-win.zip" -o "m4-win.zip"
-        7z x m4-win.zip -o/c/P/m4 -aoa -r
-
     - name: Get specific version of CMake, Ninja
-      uses: lukka/get-cmake@v3.18.3
+      uses: lukka/get-cmake@v3.24.2
 
     - name: Download ITK
       run: |
@@ -146,7 +130,6 @@ jobs:
       if: matrix.os == 'windows-2019'
       run: |
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        set PATH="%PATH%;C:\P\m4"
         ctest --output-on-failure -j 2 -V -S dashboard.cmake
       shell: cmd
 
@@ -169,6 +152,9 @@ jobs:
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
         df -h
 
+    - uses: shogo82148/actions-setup-perl@v1
+    - uses: ilammy/setup-nasm@v1
+
     - name: 'Fetch build script'
       run: |
         curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/master/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
@@ -176,10 +162,6 @@ jobs:
 
     - name: 'Build 🐍 Python 📦 package'
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libcurl4-openssl-dev m4 libzip-dev
-        export OPENSSL_INCLUDE_DIR=/usr/include
-        export OPENSSL_CRYPTO_LIBRARY=/usr/lib/x86_64-linux-gnu/libcrypto.so
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
         for tarball in "" "-manylinux2014"; do
           rm -rf ITKPythonPackage
@@ -206,7 +188,10 @@ jobs:
         sudo xcode-select -s "/Applications/Xcode_13.2.1.app"
 
     - name: Get specific version of CMake, Ninja
-      uses: lukka/get-cmake@v3.18.3
+      uses: lukka/get-cmake@v3.24.2
+
+    - uses: shogo82148/actions-setup-perl@v1
+    - uses: ilammy/setup-nasm@v1
 
     - name: 'Fetch build script'
       run: |
@@ -215,10 +200,6 @@ jobs:
 
     - name: 'Build 🐍 Python 📦 package'
       run: |
-        brew update
-        brew install m4 openssl@1.1
-        ls -l /usr/local/opt/openssl@1.1
-        export OPENSSL_ROOT_DIR=/usr/local/opt/openssl@1.1
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
         export MACOSX_DEPLOYMENT_TARGET=10.9
         ./macpython-download-cache-and-build-module-wheels.sh
@@ -238,7 +219,7 @@ jobs:
 
     steps:
     - name: Get specific version of CMake, Ninja
-      uses: lukka/get-cmake@v3.18.3
+      uses: lukka/get-cmake@v3.24.2
 
     - uses: actions/checkout@v2
       with:
@@ -249,6 +230,9 @@ jobs:
         $pythonArch = "64"
         $pythonVersion = "3.${{ matrix.python-version-minor }}"
         iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/scikit-build/scikit-ci-addons/master/windows/install-python.ps1'))
+
+    - uses: shogo82148/actions-setup-perl@v1
+    - uses: ilammy/setup-nasm@v1
 
     - name: 'Fetch build dependencies'
       shell: bash
@@ -261,16 +245,13 @@ jobs:
         7z x doxygen-1.8.11.windows.bin.zip -o/c/P/doxygen -aoa -r
         curl -L "https://data.kitware.com/api/v1/file/5bbf87ba8d777f06b91f27d6/download/grep-win.zip" -o "grep-win.zip"
         7z x grep-win.zip -o/c/P/grep -aoa -r
-        curl -L "https://data.kitware.com/api/v1/file/6320885f11dab81428207d00/download/m4-win.zip" -o "m4-win.zip"
-        head m4-win.zip
-        7z x m4-win.zip -o/c/P/m4 -aoa -r
 
     - name: 'Build 🐍 Python 📦 package'
       shell: cmd
       run: |
         cd ../../im
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        set PATH="C:\P\grep;%PATH%;C:\P\m4"
+        set PATH="C:\P\grep;%PATH%"
         set CC=cl.exe
         set CXX=cl.exe
         C:\Python3${{ matrix.python-version-minor }}-x64\python.exe C:\P\IPP\scripts\windows_build_module_wheels.py --py-envs "3${{ matrix.python-version-minor }}-x64" --no-cleanup
