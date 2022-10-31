@@ -11,6 +11,10 @@ set(ZLIB_INCLUDE_DIR ${ITKZLIB_INCLUDE_DIRS} CACHE PATH "Path to zlib include" F
 set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES} CACHE FILEPATH "Path to zlib library" FORCE)
 add_library(ZLIB::ZLIB ALIAS ${ITKZLIB_LIBRARIES})
 
+set(_itk_build_shared ${BUILD_SHARED_LIBS})
+# we want to compile tensorstore as a static library
+# that way, all of it can be included in IOOMEZarrNGFF.dll
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries?" FORCE)
 include(FetchContent)
 FetchContent_Declare(
   tensorstore
@@ -18,6 +22,8 @@ FetchContent_Declare(
   GIT_TAG        f6da8b5696a04cb6f30fab07183756d0d67d5eaa # master
 )
 FetchContent_MakeAvailable(tensorstore)
+set(BUILD_SHARED_LIBS ${_itk_build_shared} CACHE BOOL "Build shared libraries?" FORCE) # restore original flag
+unset(_itk_build_shared)
 
 itk_module_add_library(IOOMEZarrNGFF ${IOOMEZarrNGFF_SRCS})
 
