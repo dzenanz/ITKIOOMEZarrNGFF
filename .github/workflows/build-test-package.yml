@@ -98,6 +98,12 @@ jobs:
           \${CTEST_CUSTOM_WARNING_EXCEPTION}
           # macOS Azure VM Warning
           "ld: warning: text-based stub file"
+          "Wunused-result"
+          "file: .+ has no symbols"
+          "Wpointer-bool-conversion"
+          "note: prefix with the address-of operator to silence this warning"
+          "warning C4722: 'riegeli::internal::UnreachableStream::~UnreachableStream': destructor never returns, potential memory leak"
+          "warning C4722: 'riegeli::internal::CheckFailed::~CheckFailed': destructor never returns, potential memory leak"
           )
         set(dashboard_no_clean 1)
         set(ENV{CC} ${{ matrix.c-compiler }})
