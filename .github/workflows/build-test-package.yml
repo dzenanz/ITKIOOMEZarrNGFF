@@ -3,8 +3,8 @@ name: Build, test, package
 on: [push,pull_request]
 
 env:
-  itk-git-tag: "f423f2d7c7b8f0c33eb2a4bd07561aae63e89ad0"
-  itk-wheel-tag: "v5.3rc04.post3"
+  itk-git-tag: "55bdee957fb1df23556bcf58f3ac049794e5ede8"
+  itk-wheel-tag: "v5.3rc04.post4"
 
 jobs:
   build-test-cxx:
@@ -139,7 +139,7 @@ jobs:
     strategy:
       max-parallel: 2
       matrix:
-        python-version: [37, 38, 39, 310]
+        python-version: [37, 38, 39, 310, 311]
 
     steps:
     - uses: actions/checkout@v2
@@ -161,12 +161,13 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/zarrCI/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/master/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
         chmod u+x dockcross-manylinux-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
       run: |
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
+        export TARBALL_SPECIALIZATION="-manylinux2014"
         ./dockcross-manylinux-download-cache-and-build-module-wheels.sh cp${{ matrix.python-version }}
 
     - name: Publish Python package as GitHub Artifact
@@ -195,7 +196,7 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/zarrCI/scripts/macpython-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/master/scripts/macpython-download-cache-and-build-module-wheels.sh -O
         chmod u+x macpython-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
@@ -211,11 +212,11 @@ jobs:
         path: dist
 
   build-windows-python-packages:
-    runs-on: windows-2019
+    runs-on: windows-2022
     strategy:
       max-parallel: 2
       matrix:
-        python-version-minor: [7, 8, 9, 10]
+        python-version-minor: [7, 8, 9, 10, 11]
 
     steps:
     - name: Get specific version of CMake, Ninja
@@ -250,7 +251,7 @@ jobs:
       shell: cmd
       run: |
         cd ../../im
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         set PATH=C:\P\grep;%PATH%
         set CC=cl.exe
         set CXX=cl.exe
