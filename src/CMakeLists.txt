@@ -19,7 +19,7 @@ include(FetchContent)
 FetchContent_Declare(
   tensorstore
   GIT_REPOSITORY https://github.com/google/tensorstore
-  GIT_TAG        b8949f2157d09c4e1235fbc4af2852f05e3b4759 # master
+  GIT_TAG        af7dbb9c93f6a06ebf72a1a583718f5894f98262 # master
 )
 FetchContent_MakeAvailable(tensorstore)
 set(BUILD_SHARED_LIBS ${_itk_build_shared} CACHE BOOL "Build shared libraries?" FORCE) # restore original flag
