@@ -167,7 +167,7 @@ jobs:
     - name: 'Build 🐍 Python 📦 package'
       run: |
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
-        export TARBALL_SPECIALIZATION="-manylinux2014"
+        export TARBALL_SPECIALIZATION="-manylinux_2_28"
         ./dockcross-manylinux-download-cache-and-build-module-wheels.sh cp${{ matrix.python-version }}
 
     - name: Publish Python package as GitHub Artifact
