@@ -15,6 +15,7 @@ set(_itk_build_shared ${BUILD_SHARED_LIBS})
 # we want to compile tensorstore as a static library
 # that way, all of it can be included in IOOMEZarrNGFF.dll
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries?" FORCE)
+set(CMAKE_FOLDER TensorStore)
 include(FetchContent)
 FetchContent_Declare(
   tensorstore
@@ -22,6 +23,7 @@ FetchContent_Declare(
   GIT_TAG        b8949f2157d09c4e1235fbc4af2852f05e3b4759 # master
 )
 FetchContent_MakeAvailable(tensorstore)
+unset(CMAKE_FOLDER)
 set(BUILD_SHARED_LIBS ${_itk_build_shared} CACHE BOOL "Build shared libraries?" FORCE) # restore original flag
 unset(_itk_build_shared)
 

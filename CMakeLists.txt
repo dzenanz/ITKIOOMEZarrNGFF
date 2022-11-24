@@ -5,6 +5,8 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 project(IOOMEZarrNGFF)
 
 set(IOOMEZarrNGFF_LIBRARIES IOOMEZarrNGFF)
