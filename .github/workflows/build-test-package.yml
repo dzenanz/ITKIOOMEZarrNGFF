@@ -162,7 +162,7 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/archive-update-step/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/c98c5e3465a297ba9762d43d7a23b3966f603eeb/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
         chmod u+x dockcross-manylinux-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
@@ -198,7 +198,7 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/archive-update-step/scripts/macpython-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/c98c5e3465a297ba9762d43d7a23b3966f603eeb/scripts/macpython-download-cache-and-build-module-wheels.sh -O
         chmod u+x macpython-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
