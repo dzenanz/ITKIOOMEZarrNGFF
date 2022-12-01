@@ -20,7 +20,7 @@ include(FetchContent)
 FetchContent_Declare(
   tensorstore
   GIT_REPOSITORY https://github.com/google/tensorstore
-  GIT_TAG        b8949f2157d09c4e1235fbc4af2852f05e3b4759 # master
+  GIT_TAG        efca7ed88fcdc6e2a64bdb12626cdaeb92b92ecb # master
 )
 FetchContent_MakeAvailable(tensorstore)
 unset(CMAKE_FOLDER)
