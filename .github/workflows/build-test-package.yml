@@ -5,7 +5,7 @@ on: [push,pull_request]
 env:
   itk-git-tag: "v5.3.0"
   itk-wheel-tag: "v5.3.0"
-  itk-python-package-tag: "1e3edf04f4289b8b0c9647c0a969dbeb95c40a82"
+  itk-python-package-tag: "updateDockcross"
 
 jobs:
   build-test-cxx:
@@ -162,7 +162,7 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/c98c5e3465a297ba9762d43d7a23b3966f603eeb/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/updateDockcross/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
         chmod u+x dockcross-manylinux-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
@@ -198,7 +198,7 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/c98c5e3465a297ba9762d43d7a23b3966f603eeb/scripts/macpython-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/updateDockcross/scripts/macpython-download-cache-and-build-module-wheels.sh -O
         chmod u+x macpython-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
