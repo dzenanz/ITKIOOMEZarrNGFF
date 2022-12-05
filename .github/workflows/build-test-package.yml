@@ -5,7 +5,7 @@ on: [push,pull_request]
 env:
   itk-git-tag: "v5.3.0"
   itk-wheel-tag: "v5.3.0"
-  itk-python-package-tag: "updateDockcross"
+  ITKPythonPackage-git-tag: "f7c4b5b6d3ac532aa3693ff87e46f0c41543c74f"
 
 jobs:
   build-test-cxx:
@@ -13,13 +13,13 @@ jobs:
     strategy:
       max-parallel: 3
       matrix:
-        os: [ubuntu-22.04, windows-2019, macos-11]
+        os: [ubuntu-22.04, windows-2022, macos-11]
         include:
           - os: ubuntu-22.04
             c-compiler: "gcc"
             cxx-compiler: "g++"
             cmake-build-type: "MinSizeRel"
-          - os: windows-2019
+          - os: windows-2022
             c-compiler: "cl.exe"
             cxx-compiler: "cl.exe"
             cmake-build-type: "Release"
@@ -50,7 +50,7 @@ jobs:
         git checkout ${{ env.itk-git-tag }}
 
     - name: Build ITK
-      if: matrix.os != 'windows-2019'
+      if: matrix.os != 'windows-2022'
       run: |
         cd ..
         mkdir ITK-build
@@ -59,12 +59,12 @@ jobs:
         ninja
 
     - name: Build ITK
-      if: matrix.os == 'windows-2019'
+      if: matrix.os == 'windows-2022'
       run: |
         cd ..
         mkdir ITK-build
         cd ITK-build
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         cmake -DCMAKE_C_COMPILER:FILEPATH="${{ matrix.c-compiler }}" -DBUILD_SHARED_LIBS:BOOL=ON -DCMAKE_CXX_COMPILER="${{ matrix.cxx-compiler }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.cmake-build-type }} -DBUILD_TESTING:BOOL=OFF -GNinja ../ITK
         ninja
       shell: cmd
@@ -83,8 +83,8 @@ jobs:
         file(TO_CMAKE_PATH "\$ENV{GITHUB_WORKSPACE}/" CTEST_SOURCE_DIRECTORY)
         file(TO_CMAKE_PATH "\$ENV{GITHUB_WORKSPACE}/../build" CTEST_BINARY_DIRECTORY)
         set(dashboard_source_name "${GITHUB_REPOSITORY}")
-        if(ENV{GITHUB_REF} MATCHES "main")
-          set(branch "-main")
+        if(ENV{GITHUB_REF} MATCHES "master")
+          set(branch "-master")
           set(dashboard_model "Continuous")
         else()
           set(branch "-${GITHUB_REF}")
@@ -124,14 +124,14 @@ jobs:
         cat dashboard.cmake
 
     - name: Build and test
-      if: matrix.os != 'windows-2019'
+      if: matrix.os != 'windows-2022'
       run: |
         ctest --output-on-failure -j 2 -V -S dashboard.cmake
 
     - name: Build and test
-      if: matrix.os == 'windows-2019'
+      if: matrix.os == 'windows-2022'
       run: |
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         ctest --output-on-failure -j 2 -V -S dashboard.cmake
       shell: cmd
 
@@ -149,8 +149,13 @@ jobs:
       run: |
         # Workaround for https://github.com/actions/virtual-environments/issues/709
         df -h
+        sudo apt-get remove -y '^dotnet-.*'
+        sudo apt-get remove -y '^llvm-.*'
+        sudo apt-get remove -y 'php.*'
+        sudo apt-get autoremove -y
         sudo apt-get clean
         sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf /usr/share/dotnet/
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
         df -h
 
@@ -162,14 +167,16 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/updateDockcross/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/${{ env.ITKPythonPackage-git-tag }}/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
         chmod u+x dockcross-manylinux-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
       run: |
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
-        export ITKPYTHONPACKAGE_TAG=${{ env.itk-python-package-tag }}
-        export TARBALL_SPECIALIZATION="-manylinux_2_28"
+        export ITKPYTHONPACKAGE_TAG=${{ env.ITKPythonPackage-git-tag }}
+        export MANYLINUX_VERSION="_2_28"
+        echo "Building for manylinux specialization ${MANYLINUX_VERSION}"
+        pwd
         ./dockcross-manylinux-download-cache-and-build-module-wheels.sh cp${{ matrix.python-version }}
 
     - name: Publish Python package as GitHub Artifact
@@ -198,14 +205,15 @@ jobs:
 
     - name: 'Fetch build script'
       run: |
-        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/updateDockcross/scripts/macpython-download-cache-and-build-module-wheels.sh -O
+        curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/${{ env.ITKPythonPackage-git-tag }}/scripts/macpython-download-cache-and-build-module-wheels.sh -O
         chmod u+x macpython-download-cache-and-build-module-wheels.sh
 
     - name: 'Build 🐍 Python 📦 package'
       run: |
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
-        export ITKPYTHONPACKAGE_TAG=${{ env.itk-python-package-tag }}
+        export ITKPYTHONPACKAGE_TAG=${{ env.ITKPythonPackage-git-tag }}
         export MACOSX_DEPLOYMENT_TARGET=10.14
+        pwd
         ./macpython-download-cache-and-build-module-wheels.sh
 
     - name: Publish Python package as GitHub Artifact
@@ -229,6 +237,12 @@ jobs:
       with:
         path: "im"
 
+    - name: 'Reduce source path length'
+      shell: bash
+      run: |
+        # Move checked-out source to a shorter path to avoid Windows path length issues
+        mv im ../../
+
     - name: 'Install Python'
       run: |
         $pythonArch = "64"
@@ -241,7 +255,6 @@ jobs:
     - name: 'Fetch build dependencies'
       shell: bash
       run: |
-        mv im ../../
         cd ../../im
         curl -L "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${{ env.itk-wheel-tag }}/ITKPythonBuilds-windows.zip" -o "ITKPythonBuilds-windows.zip"
         7z x ITKPythonBuilds-windows.zip -o/c/P -aoa -r
@@ -250,24 +263,27 @@ jobs:
         curl -L "https://data.kitware.com/api/v1/file/5bbf87ba8d777f06b91f27d6/download/grep-win.zip" -o "grep-win.zip"
         7z x grep-win.zip -o/c/P/grep -aoa -r
 
-        # Update step for skbuild issue in v5.3.0 build archive
-        echo "Updating ITKPythonPackage build scripts to ${{ env.itk-python-package-tag }}"
-        pushd /c/P/IPP
-        git remote add InsightSoftwareConsortium https://github.com/InsightSoftwareConsortium/ITKPythonPackage.git --tags
-        git fetch InsightSoftwareConsortium
-        git checkout ${{ env.itk-python-package-tag }}
-        git status
-        popd
+        if [[ -n ${{ env.ITKPythonPackage-git-tag }} ]]; then
+          echo "Updating ITKPythonPackage build scripts to ${{ env.ITKPythonPackage-git-tag }}"
+          pushd /c/P/IPP
+          git remote add InsightSoftwareConsortium https://github.com/InsightSoftwareConsortium/ITKPythonPackage.git --tags
+          git fetch InsightSoftwareConsortium
+          git checkout ${{ env.ITKPythonPackage-git-tag }}
+          git status
+          popd
+        else
+          echo "Using ITKPythonPackage scripts included with ITKPythonBuilds archive"
+        fi
 
     - name: 'Build 🐍 Python 📦 package'
       shell: cmd
       run: |
         cd ../../im
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         set PATH=C:\P\grep;%PATH%
-        set ITKPYTHONPACKAGE_TAG=${{ env.itk-python-package-tag }}
         set CC=cl.exe
         set CXX=cl.exe
+        pwd
         C:\Python3${{ matrix.python-version-minor }}-x64\python.exe C:\P\IPP\scripts\windows_build_module_wheels.py --py-envs "3${{ matrix.python-version-minor }}-x64" --no-cleanup
 
     - name: Publish Python package as GitHub Artifact
