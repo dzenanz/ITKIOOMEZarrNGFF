@@ -159,12 +159,6 @@ jobs:
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
         df -h
 
-    - name: Get specific version of CMake, Ninja
-      uses: lukka/get-cmake@v3.24.2
-
-    - uses: shogo82148/actions-setup-perl@v1
-    - uses: ilammy/setup-nasm@v1
-
     - name: 'Fetch build script'
       run: |
         curl -L https://raw.githubusercontent.com/InsightSoftwareConsortium/ITKPythonPackage/${{ env.ITKPythonPackage-git-tag }}/scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh -O
