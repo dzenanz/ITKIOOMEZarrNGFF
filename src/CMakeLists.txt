@@ -37,21 +37,12 @@ FetchContent_Declare(
   GIT_TAG        ${zstd_GIT_TAG}
 )
 FetchContent_MakeAvailable(zstd_lib)
-# set(zstd_lib_INCLUDE_DIR "${zstd_lib_SOURCE_DIR}/lib")
-# include_directories(${zstd_lib_INCLUDE_DIR})
+
 add_subdirectory("${zstd_lib_SOURCE_DIR}/build/cmake" "${zstd_lib_BINARY_DIR}")
 
-# Push the current (NEW) CMake policy onto the stack, and apply the OLD policy.
-cmake_policy(PUSH)
-cmake_policy(SET CMP0026 OLD)
-get_property(Zstd_LIBRARY TARGET libzstd_static PROPERTY LOCATION)
-cmake_policy(POP)
-
-# prepare variabes for TensorStore
+set(Zstd_DIR ${zstd_lib_BINARY_DIR})
+find_package(Zstd CONFIG REQUIRED) # find it now, so tensorstore finds the same zstd later
 set(TENSORSTORE_USE_SYSTEM_ZSTD ON)
-# set(Zstd_DIR ${zstd_lib_BINARY_DIR})
-set(Zstd_INCLUDE_DIR "${zstd_lib_SOURCE_DIR}/lib")
-message ("Zstd_LIBRARY == ${Zstd_LIBRARY}")
 
 set(CMAKE_FOLDER TensorStore)
 FetchContent_Declare(
