@@ -40,9 +40,10 @@ FetchContent_MakeAvailable(zstd_lib)
 
 add_subdirectory("${zstd_lib_SOURCE_DIR}/build/cmake" "${zstd_lib_BINARY_DIR}")
 
-set(Zstd_DIR ${zstd_lib_BINARY_DIR})
-find_package(Zstd CONFIG REQUIRED) # find it now, so tensorstore finds the same zstd later
-set(TENSORSTORE_USE_SYSTEM_ZSTD ON)
+set(zstd_DIR ${zstd_lib_BINARY_DIR})
+find_package(zstd CONFIG REQUIRED) # find it now, so tensorstore finds the same zstd later
+add_library(Zstd::Zstd ALIAS libzstd_static)
+# set(TENSORSTORE_USE_SYSTEM_ZSTD ON)
 
 set(CMAKE_FOLDER TensorStore)
 FetchContent_Declare(
