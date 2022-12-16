@@ -17,33 +17,13 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries?" FORCE)
 
 include(FetchContent)
 # TensorStore has problems building its bundled zstd, so we build it here
-option(ZSTD_BUILD_CONTRIB "BUILD_CONTRIB" OFF)
-option(ZSTD_BUILD_PROGRAMS "BUILD_PROGRAMS" OFF)
-option(ZSTD_BUILD_SHARED "BUILD_SHARED" OFF)
-option(ZSTD_BUILD_STATIC "BUILD_STATIC" ON)
-option(ZSTD_BUILD_TESTS "BUILD_TESTS" OFF)
-option(ZSTD_BUILD_LEGACY_SUPPORT "BUILD_LEGACY_SUPPORT" OFF)
-option(ZSTD_MULTITHREAD_SUPPORT "BUILD_MULTITHREAD_SUPPORT" OFF)
-option(ZSTD_BUILD_PROGRAMS_LINK_SHARED "BUILD_PROGRAMS_LINK_SHARED" OFF)
-option(ZSTD_BUILD_LZ4 "BUILD_LZ4" OFF)
-option(ZSTD_BUILD_LZMA "BUILD_LZMA" OFF)
-option(ZSTD_BUILD_ZLIB "BUILD_ZLIB" OFF)
-set(zstd_GIT_REPOSITORY "https://github.com/facebook/zstd.git")
-# v1.5.2
-set(zstd_GIT_TAG c9c7be85f49f45a581ec00c309afda5c62ba9ef2)
-FetchContent_Declare(
-  zstd_lib
-  GIT_REPOSITORY ${zstd_GIT_REPOSITORY}
-  GIT_TAG        ${zstd_GIT_TAG}
-)
-FetchContent_MakeAvailable(zstd_lib)
+FetchContent_Declare(Zstd
+    URL "https://github.com/facebook/zstd/archive/v1.5.2.zip"
+    URL_HASH "SHA256=53f4696f3cec8703f12d3402707a6aaf7eb92d43c90d61e1d32454bda5da7b9c")
 
-add_subdirectory("${zstd_lib_SOURCE_DIR}/build/cmake" "${zstd_lib_BINARY_DIR}")
+FetchContent_MakeAvailable(Zstd)
 
-set(zstd_DIR ${zstd_lib_BINARY_DIR})
-find_package(zstd CONFIG REQUIRED) # find it now, so tensorstore finds the same zstd later
-add_library(Zstd::Zstd ALIAS libzstd_static)
-# set(TENSORSTORE_USE_SYSTEM_ZSTD ON)
+set(TENSORSTORE_USE_SYSTEM_ZSTD ON)
 
 set(CMAKE_FOLDER TensorStore)
 FetchContent_Declare(
