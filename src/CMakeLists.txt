@@ -12,6 +12,11 @@ set(ZLIB_LIBRARY ${ITKZLIB_LIBRARIES} CACHE FILEPATH "Path to zlib library" FORC
 add_library(ZLIB::ZLIB ALIAS ${ITKZLIB_LIBRARIES})
 
 set(_itk_build_shared ${BUILD_SHARED_LIBS})
+
+# TensorStore wants GCC as assembler
+set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER}) # undo this setting from:
+# https://github.com/dockcross/dockcross/blob/e913a7f1d632940a4e6fb233fb6b5cdfa8c4502d/manylinux_2_28-x64/Toolchain.cmake#L11
+
 # we want to compile tensorstore as a static library
 # that way, all of it can be included in IOOMEZarrNGFF.dll
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries?" FORCE)
