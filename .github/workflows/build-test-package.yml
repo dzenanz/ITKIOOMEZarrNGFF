@@ -168,7 +168,7 @@ jobs:
       run: |
         export ITK_PACKAGE_VERSION=${{ env.itk-wheel-tag }}
         export ITKPYTHONPACKAGE_TAG=${{ env.ITKPythonPackage-git-tag }}
-        for manylinux_version in "_2_28" "2014"; do
+        for manylinux_version in "2014" "_2_28"; do
           rm -rf ITKPythonPackage
           export MANYLINUX_VERSION=${manylinux_version}
           echo "Building for manylinux specialization ${MANYLINUX_VERSION}"
