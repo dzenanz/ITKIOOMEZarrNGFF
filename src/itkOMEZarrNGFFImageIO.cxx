@@ -286,7 +286,7 @@ void
 OMEZarrNGFFImageIO::ReadArrayMetadata(std::string path, std::string driver)
 {
   auto openFuture =
-    tensorstore::Open({ { "driver", "zarr" }, { "kvstore", { { "driver", "zip" }, { "path", path } } } },
+    tensorstore::Open({ { "driver", "zarr" }, { "kvstore", { { "driver", driver }, { "path", path } } } },
                       tsContext,
                       tensorstore::OpenMode::open,
                       tensorstore::RecheckCached{ false },
