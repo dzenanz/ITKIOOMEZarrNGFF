@@ -21,6 +21,8 @@
 #include "itkIntTypes.h"
 #include "itkByteSwapper.h"
 
+#include <filesystem>
+
 #include "tensorstore/context.h"
 #include "tensorstore/open.h"
 #include "tensorstore/index_space/dim_expression.h"
@@ -564,6 +566,14 @@ OMEZarrNGFFImageIO::WriteImageInformation()
 void
 OMEZarrNGFFImageIO::Write(const void * buffer)
 {
+  std::filesystem::path file(this->GetFileName());
+  if (std::filesystem::is_regular_file(file))
+  {
+    // work around current limitation of TensorStore's ZIP support
+    // by deleting the existing zip file
+    std::filesystem::remove(file);
+  }
+
   this->WriteImageInformation();
 
   if (itkToTensorstoreComponentType(this->GetComponentType()) == tensorstore::dtype_v<void>)
