@@ -39,11 +39,13 @@ OMEZarrNGFFImageIO::OMEZarrNGFFImageIO()
   this->AddSupportedWriteExtension(".zr2");
   this->AddSupportedWriteExtension(".zr3");
   this->AddSupportedWriteExtension(".zip");
+  this->AddSupportedWriteExtension(".memory");
 
   this->AddSupportedReadExtension(".zarr");
   this->AddSupportedReadExtension(".zr2");
   this->AddSupportedReadExtension(".zr3");
   this->AddSupportedReadExtension(".zip");
+  this->AddSupportedWriteExtension(".memory");
 
   this->Self::SetCompressor("");
   this->Self::SetMaximumCompressionLevel(9);
@@ -178,7 +180,7 @@ getKVstoreDriver(std::string path)
   {
     return "file";
   }
-  if (path.substr(path.size() - 4) == ".zip")
+  if (path.substr(path.size() - 4) == ".zip" || path.substr(path.size() - 7) == ".memory")
   {
     return "zip";
   }
