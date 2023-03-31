@@ -85,7 +85,7 @@ doTest(const char * inputFileName, const char * outputFileName)
 
   std::ofstream oFile(outputFileName, std::ios::binary);
   oFile.write(bufferInfo.pointer, bufferInfo.size);
-  delete bufferInfo.pointer;
+  free(bufferInfo.pointer);
 
   std::cout << "Test finished" << std::endl;
   return EXIT_SUCCESS;
