@@ -81,11 +81,11 @@ itk_add_test(NAME IOOMEZarrNGFF_cthead1_zipRead
   )
 
 itk_add_test(NAME IOOMEZarrNGFF_inMemory_zip
-  COMMAND itkOMEZarrNGFFInMemoryTest
+  COMMAND IOOMEZarrNGFFTestDriver
     --compare
       DATA{Baseline/cthead1.zip}
-      ${ITK_TEST_OUTPUT_DIR}/memory.mha
-    itkOMEZarrNGFFImageIOTest
+      ${ITK_TEST_OUTPUT_DIR}/memory.zip
+    itkOMEZarrNGFFInMemoryTest
       DATA{Baseline/cthead1.zip}
-      ${ITK_TEST_OUTPUT_DIR}/memory.mha
+      ${ITK_TEST_OUTPUT_DIR}/memory.zip
   )
