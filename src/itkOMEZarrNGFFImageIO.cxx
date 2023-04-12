@@ -21,8 +21,6 @@
 #include "itkIntTypes.h"
 #include "itkByteSwapper.h"
 
-#include <filesystem>
-
 #include "tensorstore/context.h"
 #include "tensorstore/open.h"
 #include "tensorstore/index_space/dim_expression.h"
