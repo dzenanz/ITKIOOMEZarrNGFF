@@ -65,7 +65,7 @@ doTest(const char * inputFileName, const char * outputFileName)
   typename ImageType::Pointer memImage = reader->GetOutput();
 
   using CompareType = itk::Testing::ComparisonImageFilter<ImageType, ImageType>;
-  CompareType::Pointer comparer = CompareType::New();
+  typename CompareType::Pointer comparer = CompareType::New();
   comparer->SetValidInput(image);
   comparer->SetTestInput(memImage);
   comparer->Update();
@@ -73,7 +73,7 @@ doTest(const char * inputFileName, const char * outputFileName)
   {
     itkGenericExceptionMacro("The image read through memory is different from the one read through file");
   }
-  buffer.swap(std::vector<char>()); // delete it
+  buffer = std::vector<char>(); // deallocate it
 
   bufferInfo = itk::OMEZarrNGFFImageIO::BufferInfo{};
   using WriterType = itk::ImageFileWriter<ImageType>;
