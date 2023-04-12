@@ -568,13 +568,6 @@ OMEZarrNGFFImageIO::WriteImageInformation()
 void
 OMEZarrNGFFImageIO::Write(const void * buffer)
 {
-  std::filesystem::path file(this->GetFileName());
-  if (std::filesystem::is_regular_file(file))
-  {
-    // work around current limitation of TensorStore's ZIP support
-    // by deleting the existing zip file
-    std::filesystem::remove(file);
-  }
   tsContext = tensorstore::Context::Default(); // start with clean zip handles
   this->WriteImageInformation();
 
