@@ -31,7 +31,7 @@
 
 namespace itk
 {
-static tensorstore::Context tsContext = tensorstore::Context::Default();
+thread_local tensorstore::Context tsContext = tensorstore::Context::Default();
 
 OMEZarrNGFFImageIO::OMEZarrNGFFImageIO()
 {
@@ -214,7 +214,7 @@ jsonRead(std::string path, nlohmann::json & result, std::string driver)
 {
   // Reading JSON via TensorStore allows it to be in the cloud
   auto attrs_store = tensorstore::Open<nlohmann::json, 0>(
-                       { { "driver", "json" }, { "kvstore", { { "driver", driver }, { "path", path } } } })
+                       { { "driver", "json" }, { "kvstore", { { "driver", driver }, { "path", path } } } }, tsContext)
                        .result()
                        .value();
 
@@ -575,7 +575,7 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
     // by deleting the existing zip file
     std::filesystem::remove(file);
   }
-
+  tsContext = tensorstore::Context::Default(); // start with clean zip handles
   this->WriteImageInformation();
 
   if (itkToTensorstoreComponentType(this->GetComponentType()) == tensorstore::dtype_v<void>)
@@ -624,6 +624,9 @@ OMEZarrNGFFImageIO::Write(const void * buffer)
   {
     itkExceptionMacro("Unsupported component type: " << GetComponentTypeAsString(this->GetComponentType()));
   }
+
+  // Create a new context to close the open zip handles
+  tsContext = tensorstore::Context::Default();
 }
 
 } // end namespace itk
