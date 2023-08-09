@@ -93,6 +93,10 @@ doTest(const char * inputFileName, const char * outputFileName)
   ITK_TEST_EXPECT_TRUE(oFileResult.good());
   std::cout << "Output image written to " << std::string(outputFileName) << std::endl;
 
+  // Validate output file can be read back in
+  auto outputImage = itk::ReadImage<ImageType>(outputFileName);
+  outputImage->Print(std::cout);
+
   std::cout << "Test finished" << std::endl;
 
   return EXIT_SUCCESS;
