@@ -91,6 +91,7 @@ doTest(const char * inputFileName, const char * outputFileName)
   // Validate output file was written and is available for read
   std::ifstream oFileResult(outputFileName);
   ITK_TEST_EXPECT_TRUE(oFileResult.good());
+  std::cout << "Output image written to " << std::string(outputFileName) << std::endl;
 
   std::cout << "Test finished" << std::endl;
 
