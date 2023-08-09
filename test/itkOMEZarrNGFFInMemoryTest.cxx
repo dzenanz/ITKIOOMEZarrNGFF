@@ -87,7 +87,12 @@ doTest(const char * inputFileName, const char * outputFileName)
   oFile.write(bufferInfo.pointer, bufferInfo.size);
   free(bufferInfo.pointer);
 
+  // Validate output file was written and is available for read
+  std::ifstream oFileResult(outputFileName);
+  ITK_TEST_EXPECT_TRUE(oFileResult.good());
+
   std::cout << "Test finished" << std::endl;
+
   return EXIT_SUCCESS;
 }
 
