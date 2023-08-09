@@ -85,6 +85,7 @@ doTest(const char * inputFileName, const char * outputFileName)
 
   std::ofstream oFile(outputFileName, std::ios::binary);
   oFile.write(bufferInfo.pointer, bufferInfo.size);
+  oFile.close();
   free(bufferInfo.pointer);
 
   // Validate output file was written and is available for read
