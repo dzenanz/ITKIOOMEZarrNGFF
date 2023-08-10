@@ -54,13 +54,16 @@ doTest(const char * inputFileName, const char * outputFileName)
   {
     itkGenericExceptionMacro(<< "Could not read the input file directly: " << inputFileName);
   }
+  file.close();
 
   itk::OMEZarrNGFFImageIO::BufferInfo bufferInfo{ buffer.data(), buffer.size() };
 
   size_t      bufferInfoAddress = reinterpret_cast<size_t>(&bufferInfo);
   std::string memAddress = std::to_string(bufferInfoAddress) + ".memory";
 
+  typename ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName(memAddress);
+  reader->SetImageIO(itk::OMEZarrNGFFImageIO::New());
   ITK_TRY_EXPECT_NO_EXCEPTION(reader->Update());
   typename ImageType::Pointer memImage = reader->GetOutput();
 
