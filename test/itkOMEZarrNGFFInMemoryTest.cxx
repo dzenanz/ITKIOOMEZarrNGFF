@@ -29,13 +29,6 @@
 
 namespace
 {
-std::string
-makeMemoryFileName(const itk::OMEZarrNGFFImageIO::BufferInfo & bufferInfo)
-{
-  size_t bufferInfoAddress = reinterpret_cast<size_t>(&bufferInfo);
-  return std::to_string(bufferInfoAddress) + ".memory";
-}
-
 template <typename PixelType, unsigned Dimension>
 int
 doTest(const char * inputFileName, const char * outputFileName)
@@ -69,8 +62,9 @@ doTest(const char * inputFileName, const char * outputFileName)
 
   // Read the zip-compressed bitstream from stack memory into an ITK image
   itk::OMEZarrNGFFImageIO::BufferInfo bufferInfo{ buffer.data(), buffer.size() };
-  const auto initBufferInfoPtr = &bufferInfo;
-  std::string                         memAddress = makeMemoryFileName(bufferInfo);
+
+  const auto  initBufferInfoPtr = &bufferInfo;
+  std::string memAddress = itk::OMEZarrNGFFImageIO::MakeMemoryFileName(bufferInfo);
 
   typename ReaderType::Pointer memReader = ReaderType::New();
   memReader->SetFileName(memAddress);
@@ -90,8 +84,8 @@ doTest(const char * inputFileName, const char * outputFileName)
   }
 
   // Verify a local copy of the buffer is maintained in the itk::Image
-  memImage->DisconnectPipeline(); // keep our local copy of the memory buffer
-  std::fill(buffer.begin(), buffer.end(), 0);   // reset the memory buffer in place
+  memImage->DisconnectPipeline();                  // keep our local copy of the memory buffer
+  std::fill(buffer.begin(), buffer.end(), 0);      // reset the memory buffer in place
   ITK_TRY_EXPECT_NO_EXCEPTION(comparer->Update()); // should not reflect buffer update
   if (comparer->GetNumberOfPixelsWithDifferences() > 0)
   {
@@ -121,9 +115,9 @@ doTest(const char * inputFileName, const char * outputFileName)
 
   std::cout << static_cast<void *>(bufferInfo.pointer) << std::endl;
   std::cout << bufferInfo.size << std::endl;
-  //ITK_TEST_EXPECT_EQUAL(bufferInfo.pointer, buffer.data()); // TESTME
-  //ITK_TEST_EXPECT_EQUAL(bufferInfo.size, buffer.size());
-  // verify we can access the memory at the end of the data buffer
+  // ITK_TEST_EXPECT_EQUAL(bufferInfo.pointer, buffer.data()); // TESTME
+  // ITK_TEST_EXPECT_EQUAL(bufferInfo.size, buffer.size());
+  //  verify we can access the memory at the end of the data buffer
 
   // Write zip bitstream to disk
   std::ofstream oFile(outputFileName, std::ios::binary);
